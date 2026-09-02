@@ -1,0 +1,3017 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>พิกัด — Survey Coordinate Toolkit</title>
+<style>
+/* Fonts are system-only (no external CDN) so the app works fully offline.
+   'Noto Sans Thai' / 'Leelawadee UI' / 'TH Sarabun New' are kept as
+   fallback *names* in case the OS already has them installed locally —
+   nothing here is fetched over the network. */
+:root{
+  --paper:#EAE7DC;
+  --paper-line:#C7C0AC;
+  --ink:#1F2E2B;
+  --ink-soft:#4B5A54;
+  --accent:#C1541E;
+  --accent-soft:#E8A93E;
+  --pine:#2F6F5E;
+  --rust:#A63328;
+  --card:#F5F3EC;
+  --white:#FFFFFF;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(75,90,84,0.08) 28px),
+    repeating-linear-gradient(90deg, transparent, transparent 27px, rgba(75,90,84,0.08) 28px),
+    var(--paper);
+  color:var(--ink);
+  font-family:'Leelawadee UI','Noto Sans Thai','TH Sarabun New',-apple-system,'Segoe UI',Roboto,sans-serif;
+  min-height:100vh;
+  padding-bottom:40px;
+}
+.mono{font-family:'JetBrains Mono','Consolas','SFMono-Regular',Menlo,monospace;}
+
+/* ---- App bar ---- */
+.appbar{
+  background:var(--ink);
+  color:var(--paper);
+  padding:14px 16px 12px;
+  position:sticky; top:0; z-index:50;
+  box-shadow:0 3px 10px rgba(0,0,0,0.25);
+}
+.appbar-row{display:flex; align-items:center; gap:12px;}
+.compass{
+  width:34px;height:34px;border-radius:50%;
+  border:2px solid var(--accent-soft);
+  display:flex;align-items:center;justify-content:center;
+  font-family:-apple-system,'Segoe UI',Roboto,sans-serif;font-weight:700;font-size:13px;
+  color:var(--accent-soft);
+  flex-shrink:0;
+  position:relative;
+}
+.compass::after{
+  content:'▲'; position:absolute; top:-9px; font-size:9px; color:var(--accent);
+}
+.appbar h1{
+  font-family:-apple-system,'Segoe UI',Roboto,sans-serif;
+  font-size:17px; font-weight:700; margin:0; letter-spacing:0.2px;
+}
+.appbar .sub{font-size:11.5px; color:#B9C4BE; margin-top:1px;}
+.angle-toggle{
+  margin-left:auto; display:flex; align-items:center; gap:6px;
+  font-size:11px; color:#B9C4BE; flex-shrink:0;
+}
+.angle-toggle select{
+  background:#2C3B37; color:var(--paper); border:1px solid #46564F;
+  border-radius:6px; padding:4px 6px; font-size:11px; font-family:inherit;
+}
+
+/* ---- Tabs ---- */
+.tabs{
+  display:flex; overflow-x:auto; gap:6px; padding:10px 12px;
+  background:#22322D; -webkit-overflow-scrolling:touch;
+}
+.tabs::-webkit-scrollbar{height:0px;}
+.tab{
+  flex:0 0 auto; padding:8px 12px; border-radius:8px;
+  font-size:12.5px; color:#CBD4CE; background:#2C3B37;
+  border:1px solid #3C4C46; white-space:nowrap; cursor:pointer;
+  font-weight:500;
+}
+.tab.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
+
+/* ---- Content ---- */
+.wrap{padding:14px 12px; max-width:720px; margin:0 auto;}
+.card{
+  background:var(--card);
+  border:1px solid var(--paper-line);
+  border-left:4px solid var(--accent);
+  border-radius:var(--radius);
+  padding:14px 14px 16px;
+  margin-bottom:14px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.06);
+}
+.card h2{
+  font-family:-apple-system,'Segoe UI',Roboto,sans-serif; font-size:15.5px; margin:0 0 3px;
+  color:var(--ink); display:flex; align-items:center; gap:8px;
+}
+.card .desc{font-size:12px; color:var(--ink-soft); margin:0 0 12px; line-height:1.5;}
+.field-row{display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;}
+.field{flex:1 1 120px; min-width:100px;}
+.field label{display:block; font-size:11px; color:var(--ink-soft); margin-bottom:3px; font-weight:500;}
+.field input, .field select{
+  width:100%; padding:8px 9px; border:1px solid #C9C2AF; border-radius:7px;
+  font-size:13.5px; background:#fff; color:var(--ink); font-family:'Consolas','SFMono-Regular',Menlo,monospace;
+}
+.field select{font-family:'Leelawadee UI','Noto Sans Thai','TH Sarabun New',-apple-system,'Segoe UI',Roboto,sans-serif;}
+.field input:focus, .field select:focus{outline:2px solid var(--accent-soft); outline-offset:1px;}
+
+.rowline{
+  display:flex; gap:6px; align-items:flex-end; margin-bottom:6px;
+  background:#fff; padding:8px; border-radius:8px; border:1px solid #DDD6C4;
+  position:relative;
+}
+.rowline .idx{
+  font-family:'Consolas','SFMono-Regular',Menlo,monospace; font-size:11px; color:var(--accent);
+  font-weight:700; width:18px; padding-bottom:8px; flex-shrink:0;
+}
+.btn-row{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;}
+button{
+  font-family:'Leelawadee UI','Noto Sans Thai','TH Sarabun New',-apple-system,'Segoe UI',Roboto,sans-serif; font-weight:600; font-size:13px;
+  border:none; border-radius:8px; padding:9px 14px; cursor:pointer;
+}
+.btn-primary{background:var(--accent); color:#fff;}
+.btn-primary:active{background:#a54413;}
+.btn-secondary{background:#fff; color:var(--ink); border:1px solid #C9C2AF;}
+.btn-danger{background:#fff; color:var(--rust); border:1px solid #D8B8B3; font-size:12px; padding:6px 9px;}
+.btn-small{padding:6px 10px; font-size:12px;}
+
+.result{
+  margin-top:12px; background:#fff; border:1px dashed #C9C2AF; border-radius:8px;
+  padding:10px 12px;
+}
+.result h3{font-size:12px; text-transform:uppercase; letter-spacing:0.5px; color:var(--ink-soft); margin:0 0 8px; font-weight:700;}
+table{width:100%; border-collapse:collapse; font-family:'Consolas','SFMono-Regular',Menlo,monospace; font-size:12.5px;}
+table th{ text-align:left; font-size:10.5px; color:var(--ink-soft); border-bottom:1px solid #DDD6C4; padding:4px 6px; font-weight:600;}
+table td{ padding:4px 6px; border-bottom:1px solid #EFEAE0; }
+.stat-grid{display:flex; flex-wrap:wrap; gap:10px; margin-top:4px;}
+.stat{background:#F9F7F1; border-radius:8px; padding:8px 10px; flex:1 1 130px;}
+.stat .lbl{font-size:10.5px; color:var(--ink-soft);}
+.stat .val{font-family:'Consolas','SFMono-Regular',Menlo,monospace; font-size:15px; font-weight:600; margin-top:2px;}
+.stat.good .val{color:var(--pine);}
+.stat.warn .val{color:var(--accent);}
+.stat.bad .val{color:var(--rust);}
+.error-box{background:#FBEBE9; border:1px solid #E8BDB6; color:var(--rust); padding:8px 10px; border-radius:8px; font-size:12.5px; margin-top:10px;}
+.note{font-size:11px; color:var(--ink-soft); margin-top:8px; line-height:1.5; border-top:1px dashed #DDD6C4; padding-top:8px;}
+.pill{
+  display:inline-block; font-size:10.5px; padding:2px 7px; border-radius:20px;
+  background:#EFE6D5; color:var(--ink-soft); font-weight:600; margin-left:auto;
+}
+.seg{display:flex; border:1px solid #C9C2AF; border-radius:7px; overflow:hidden; margin-bottom:8px;}
+.seg button{flex:1; border-radius:0; background:#fff; color:var(--ink-soft); font-size:12px; padding:7px;}
+.seg button.on{background:var(--pine); color:#fff;}
+hr.div{border:none; border-top:1px dashed #DDD6C4; margin:12px 0;}
+@media(max-width:380px){ .field{flex:1 1 90px;} }
+
+/* ---- Toggle switch (outdoor mode) ---- */
+.switch-row{margin-left:8px; display:flex; align-items:center; gap:6px; font-size:11px; color:#B9C4BE; flex-shrink:0;}
+.switch{ position:relative; width:34px; height:19px; flex-shrink:0; }
+.switch input{ opacity:0; width:0; height:0; }
+.switch .slider{ position:absolute; inset:0; background:#46564F; border-radius:20px; cursor:pointer; transition:.15s; }
+.switch .slider::before{ content:''; position:absolute; width:15px; height:15px; left:2px; top:2px; background:#fff; border-radius:50%; transition:.15s; }
+.switch input:checked + .slider{ background:var(--accent); }
+.switch input:checked + .slider::before{ transform:translateX(15px); }
+.iconbtn{
+  background:#2C3B37; color:var(--paper); border:1px solid #46564F; border-radius:7px;
+  padding:6px 9px; font-size:15px; flex-shrink:0; cursor:pointer; line-height:1;
+}
+
+/* ---- Library ---- */
+.lib-row{display:flex; gap:6px; align-items:flex-end; margin-bottom:6px; background:#fff; padding:8px; border-radius:8px; border:1px solid #DDD6C4;}
+.filebtn{ display:inline-block; background:#fff; color:var(--ink); border:1px solid #C9C2AF; border-radius:8px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer; }
+.filebtn input{ display:none; }
+.badge-count{ font-size:10.5px; background:var(--pine); color:#fff; border-radius:20px; padding:1px 7px; margin-left:6px; }
+
+/* ---- Outdoor / high-contrast mode ---- */
+body.outdoor{ --paper:#FFFFFF; --card:#FFFFFF; --ink:#000000; --ink-soft:#333333; --paper-line:#000000; }
+body.outdoor{ background:#FFFFFF; font-size:16px; }
+body.outdoor .card{ border-width:2px; border-left-width:6px; box-shadow:none; }
+body.outdoor .field input, body.outdoor .field select{ border:2px solid #000; font-size:15px; padding:10px; }
+body.outdoor table{ font-size:14px; }
+body.outdoor .stat .val{ font-size:17px; }
+body.outdoor button{ font-size:14.5px; }
+body.outdoor .appbar{ background:#000; }
+body.outdoor .tabs{ background:#111; }
+body.outdoor .tab{ background:#222; color:#fff; border-color:#444; }
+body.outdoor .result{ border:2px dashed #000; }
+
+/* ---- Print ---- */
+@media print{
+  .appbar, .tabs, .btn-row, .seg, button, .angle-toggle, .switch-row, .filebtn { display:none !important; }
+  body{ background:#fff !important; }
+  .card{ border:1px solid #000; box-shadow:none; break-inside:avoid; }
+  .wrap{ max-width:100%; }
+  .result{ border:1px solid #000; }
+}
+
+/* ---- Floating tools (angle converter, etc) ---- */
+.tool-float{
+  position:fixed; bottom:20px; right:20px; z-index:40;
+  background:var(--card); border:2px solid var(--accent); border-radius:12px;
+  padding:14px; box-shadow:0 4px 12px rgba(0,0,0,0.2); max-width:260px;
+  font-size:12px;
+}
+.tool-float h4{ margin:0 0 10px; font-size:13px; color:var(--accent); font-weight:700; }
+.tool-float .field{ margin-bottom:8px; }
+.tool-float .field input{ font-size:13px; padding:7px; }
+.tool-float .result-line{ display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-top:1px solid var(--paper-line); margin-top:6px; }
+.tool-float .result-line .lbl{ font-weight:600; color:var(--ink-soft); }
+.tool-float .result-line .val{ font-family:monospace; font-weight:700; color:var(--accent); }
+.tool-close{ position:absolute; top:6px; right:8px; background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-soft); padding:0; }
+
+/* ---- Canvas plot ---- */
+.plot-canvas{ width:100%; max-width:100%; border:1px solid var(--paper-line); border-radius:8px; background:#fafaf8; margin:12px 0; }
+.plot-legend{ display:flex; gap:16px; flex-wrap:wrap; font-size:11px; margin-top:8px; }
+.plot-legend .item{ display:flex; align-items:center; gap:4px; }
+.plot-legend .dot{ width:8px; height:8px; border-radius:50%; }
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <div class="appbar-row">
+    <div class="compass">N</div>
+    <div>
+      <h1>พิกัด · Survey Toolkit</h1>
+      <div class="sub">เครื่องคำนวณงานสำรวจ — พิกัดฉาก N, E</div>
+    </div>
+    <div class="angle-toggle">
+      รูปแบบมุม
+      <select id="angleModeSel" onchange="setAngleMode(this.value)">
+        <option value="dms">DDD.MMSS</option>
+        <option value="dec">ทศนิยม (°)</option>
+      </select>
+    </div>
+    <div class="switch-row">
+      กลางแดด
+      <label class="switch"><input type="checkbox" id="outdoorToggle" onchange="setOutdoorMode(this.checked)"><span class="slider"></span></label>
+    </div>
+    <button class="iconbtn" onclick="window.print()" title="พิมพ์หน้านี้">🖨️</button>
+  </div>
+</div>
+
+<div class="tabs" id="tabBar"></div>
+<div class="wrap" id="content"></div>
+<input type="file" id="csvFileInput" accept=".csv,.txt" style="display:none;">
+
+<!-- Angle Converter Floating Tool -->
+<div class="tool-float" id="toolAngleConverter" style="display:none;">
+  <button class="tool-close" onclick="toggleAngleConverter()">✕</button>
+  <h4>🔄 แปลงมุม</h4>
+  <div class="field"><label>DDD.MMSS</label><input id="convDms" type="number" step="any" placeholder="45.3015" oninput="convFromDms()"></div>
+  <div class="field"><label>ทศนิยม (°)</label><input id="convDec" type="number" step="any" placeholder="45.504167" oninput="convFromDec()"></div>
+  <div class="result-line"><span class="lbl">อ่านว่า</span><span class="val" id="convPretty">-</span></div>
+  <div class="note" id="convWarn" style="color:var(--rust);"></div>
+</div>
+
+<!-- Toggle button for angle converter (top of page) -->
+<button class="iconbtn" id="btnAngleConv" style="position:fixed;bottom:20px;right:80px;z-index:39;" onclick="toggleAngleConverter()" title="แปลงมุม">🔄</button>
+
+<script>
+/* =====================================================================
+   CORE MATH UTILITIES
+===================================================================== */
+const D2R = Math.PI/180, R2D = 180/Math.PI;
+let ANGLE_MODE = 'dms';
+function setAngleMode(v){ ANGLE_MODE = v; storageSave('pref-angle-mode', v); renderTab(currentTab); }
+
+/* DDD.MMSS -> decimal degrees.
+   Minutes/seconds of 60 or more are invalid DMS, so we reject them rather
+   than silently carrying (a typo like 45.60 would otherwise become 46.0). */
+function dmsToDec(v){
+  if(v===''||v===null||v===undefined||isNaN(v)) return NaN;
+  v = parseFloat(v);
+  const sign = v<0?-1:1; v=Math.abs(v);
+  const deg = Math.floor(v+1e-9);
+  const mmss = (v-deg)*100;
+  const min = Math.floor(mmss+1e-7);
+  let sec = (mmss-min)*100;
+  sec = Math.round(sec*1e6)/1e6;
+  if(min>=60 || sec>=60) return NaN;   // not a valid DDD.MMSS value
+  return sign*(deg+min/60+sec/3600);
+}
+/* decimal degrees -> DDD.MMSS, carrying 60" -> 1' -> 1° */
+function decToDms(dec){
+  if(isNaN(dec)) return NaN;
+  const sign = dec<0?-1:1; dec=Math.abs(dec);
+  let d = Math.floor(dec+1e-9);
+  const remMin = (dec-d)*60;
+  let m = Math.floor(remMin+1e-7);
+  let s = (remMin-m)*60;
+  s = Math.round(s*1000)/1000;
+  if(s>=59.9995){ s=0; m+=1; }
+  if(m>=60){ m=0; d+=1; }
+  return sign*(d+m/100+s/10000);
+}
+function angToDeg(v){
+  if(v===''||v===null||v===undefined||isNaN(parseFloat(v))) return NaN;
+  return ANGLE_MODE==='dms' ? dmsToDec(v) : parseFloat(v);
+}
+function degToInputVal(dec){
+  if(isNaN(dec)) return '';
+  return ANGLE_MODE==='dms' ? decToDms(dec).toFixed(4) : dec.toFixed(4);
+}
+/* Pretty D°MM'SS.S" with proper carry */
+function dmsPretty(dec){
+  if(isNaN(dec)) return '-';
+  const sign = dec<0?-1:1; dec=Math.abs(dec);
+  let d = Math.floor(dec+1e-9);
+  const remMin = (dec-d)*60;
+  let m = Math.floor(remMin+1e-7);
+  let s = (remMin-m)*60;
+  s = Math.round(s*10)/10;
+  if(s>=60){ s-=60; m+=1; }
+  if(m>=60){ m-=60; d+=1; }
+  const ss = (s<10?'0':'') + s.toFixed(1);
+  return `${sign<0?'-':''}${d}°${String(m).padStart(2,'0')}'${ss}"`;
+}
+function norm360(a){ a=a%360; if(a<0)a+=360; return a; }
+function fmt(n,dp=3){ if(n===null||n===undefined||isNaN(n)||!isFinite(n)) return '-'; return Number(n).toFixed(dp); }
+function azToBearingStr(az){
+  az = norm360(az);
+  let ns, ew, ang;
+  if(az>=0 && az<90){ns='N';ew='E';ang=az;}
+  else if(az>=90&&az<180){ns='S';ew='E';ang=180-az;}
+  else if(az>=180&&az<270){ns='S';ew='W';ang=az-180;}
+  else {ns='N';ew='W';ang=360-az;}
+  return `${ns}${dmsPretty(ang)}${ew}`;
+}
+
+/* =====================================================================
+   FLOATING TOOLS: ANGLE CONVERTER
+===================================================================== */
+function toggleAngleConverter(){
+  const tool = document.getElementById('toolAngleConverter');
+  tool.style.display = tool.style.display==='none' ? 'block' : 'none';
+}
+/* Two-way converter: type in either box, the other updates.
+   No guessing which format the number is in. */
+function convFromDms(){
+  const raw = document.getElementById('convDms').value;
+  const out = document.getElementById('convDec');
+  const warn = document.getElementById('convWarn');
+  if(raw.trim()===''){ out.value=''; warn.textContent=''; return; }
+  const dec = dmsToDec(raw);
+  if(isNaN(dec)){ out.value=''; warn.textContent='ค่าลิปดา/ฟิลิปดาต้องน้อยกว่า 60'; return; }
+  warn.textContent='';
+  out.value = dec.toFixed(6);
+  document.getElementById('convPretty').textContent = dmsPretty(dec);
+}
+function convFromDec(){
+  const raw = document.getElementById('convDec').value;
+  const out = document.getElementById('convDms');
+  const warn = document.getElementById('convWarn');
+  if(raw.trim()===''){ out.value=''; warn.textContent=''; return; }
+  const dec = parseFloat(raw);
+  if(isNaN(dec)){ out.value=''; return; }
+  warn.textContent='';
+  out.value = decToDms(dec).toFixed(4);
+  document.getElementById('convPretty').textContent = dmsPretty(dec);
+}
+
+/* =====================================================================
+   PLOT PREVIEW — Canvas drawing for traverse/area
+===================================================================== */
+function drawPlot(pts, canvasId, closed){
+  const canvas = document.getElementById(canvasId);
+  if(!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const padding = 40, w = canvas.width-2*padding, h = canvas.height-2*padding;
+  if(pts.length<2) return;
+
+  let minN=pts[0].n, maxN=pts[0].n, minE=pts[0].e, maxE=pts[0].e;
+  for(const p of pts){ minN=Math.min(minN,p.n); maxN=Math.max(maxN,p.n); minE=Math.min(minE,p.e); maxE=Math.max(maxE,p.e); }
+  const rng = Math.max(maxN-minN, maxE-minE) || 1;
+  const scale = Math.min(w,h)/(rng*1.15);
+  // Centre the drawing on the midpoint of the data extents
+  const midN = (minN+maxN)/2, midE = (minE+maxE)/2;
+  const cx = padding + w/2, cy = padding + h/2;
+  const toX = (e)=> cx + (e-midE)*scale;
+  const toY = (n)=> cy - (n-midN)*scale;
+
+  // Grid
+  ctx.strokeStyle = '#e5e2d8'; ctx.lineWidth = 1;
+  for(let i=0;i<=4;i++){
+    const x = padding + i*w/4, y = padding + i*h/4;
+    ctx.beginPath(); ctx.moveTo(x, padding); ctx.lineTo(x, padding+h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(padding+w, y); ctx.stroke();
+  }
+
+  // Polygon / polyline
+  ctx.strokeStyle = '#C1541E'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(toX(pts[0].e), toY(pts[0].n));
+  for(let i=1;i<pts.length;i++) ctx.lineTo(toX(pts[i].e), toY(pts[i].n));
+  if(closed) ctx.closePath();
+  ctx.stroke();
+
+  // Points and labels
+  for(let i=0;i<pts.length;i++){
+    const x = toX(pts[i].e), y = toY(pts[i].n);
+    ctx.fillStyle = i===0 ? '#A63328' : '#2F6F5E';
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, 2*Math.PI); ctx.fill();
+    ctx.fillStyle = '#1F2E2B'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(i, x, y-9);
+  }
+
+  // North arrow
+  ctx.fillStyle = '#1F2E2B'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('N ↑', 8, 20);
+}
+
+/* Download any canvas as a PNG file. Reused by every plot/chart below. */
+function downloadCanvasPng(canvas, filename){
+  const url = canvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+/* Adds a small "ดาวน์โหลดรูป (PNG)" button under a plot canvas */
+function addPngButton(box, canvas, filename){
+  const row = document.createElement('div');
+  row.className = 'btn-row';
+  const btn = document.createElement('button');
+  btn.className = 'btn-secondary btn-small';
+  btn.textContent = '🖼️ ดาวน์โหลดรูป (PNG)';
+  btn.onclick = ()=> downloadCanvasPng(canvas, filename);
+  row.appendChild(btn);
+  box.appendChild(row);
+}
+
+/* Append a plot canvas to a result element. Reusable across modules.
+   `closed` draws the closing segment back to point 0. */
+function attachPlot(resultEl, pts, closed, title){
+  if(!pts || pts.length < 2) return;
+  const box = document.createElement('div');
+  box.className = 'result';
+  box.innerHTML = `<h3>${title || 'แผนภาพ (Plot)'}</h3>`;
+  resultEl.appendChild(box);
+  const cv = document.createElement('canvas');
+  cv.className = 'plot-canvas';
+  cv.width = 320; cv.height = 320;
+  cv.id = 'plot-' + Math.random().toString(36).slice(2);
+  box.appendChild(cv);
+  drawPlot(pts, cv.id, !!closed);
+  addPngButton(box, cv, (title||'plot').replace(/[^a-zA-Z0-9ก-๙_-]+/g,'_')+'.png');
+}
+
+
+function dist2(A,B){ return Math.hypot(B.e-A.e, B.n-A.n); }
+function azimuth(A,B){ return norm360(Math.atan2(B.e-A.e, B.n-A.n)*R2D); }
+function shoelaceArea(pts){
+  let sum=0; const n=pts.length;
+  for(let i=0;i<n;i++){ const p1=pts[i], p2=pts[(i+1)%n]; sum += (p1.e*p2.n - p2.e*p1.n); }
+  return Math.abs(sum)/2;
+}
+function sqmToThai(area){
+  const rai = Math.floor(area/1600+1e-9);
+  const rem1 = area - rai*1600;
+  const ngan = Math.floor(rem1/400+1e-9);
+  const wa = (rem1 - ngan*400)/4;
+  return {rai, ngan, wa};
+}
+/* Display helper. The raw wa is rounded to 2 dp for printing, so carry the
+   rounded value upward: 100.00 wa is 1 ngan, 4 ngan is 1 rai. Without this
+   1599.99 sq.m prints as "0 ไร่ 3 งาน 100.00 ตร.วา". */
+function thaiAreaStr(area){
+  let {rai, ngan, wa} = sqmToThai(area);
+  wa = Math.round(wa*100)/100;
+  if(wa >= 100){ wa -= 100; ngan += 1; }
+  if(ngan >= 4){ ngan -= 4; rai += 1; }
+  return `${rai} ไร่ ${ngan} งาน ${wa.toFixed(2)} ตร.วา`;
+}
+function lawCosAngle(oppSide,s1,s2){
+  let c=(s1*s1+s2*s2-oppSide*oppSide)/(2*s1*s2);
+  c=Math.max(-1,Math.min(1,c));
+  return Math.acos(c)*R2D;
+}
+function esc(v){ return v===undefined||v===null? '' : v; }
+
+/* =====================================================================
+   TIN (Delaunay) + CUT/FILL VOLUME FROM COORDINATES
+   Points carry h = existingZ - designZ  (+ = cut, - = fill).
+   h is linear across each triangle, so the prism formula
+   V = area * (h1+h2+h3)/3 is exact when all three h share a sign.
+   Triangles straddling h=0 are split along the zero line first.
+===================================================================== */
+function tinCircumcircle(a,b,c){
+  const d = 2*(a.x*(b.y-c.y) + b.x*(c.y-a.y) + c.x*(a.y-b.y));
+  if(Math.abs(d) < 1e-12) return null;
+  const ux = ((a.x*a.x+a.y*a.y)*(b.y-c.y) + (b.x*b.x+b.y*b.y)*(c.y-a.y) + (c.x*c.x+c.y*c.y)*(a.y-b.y))/d;
+  const uy = ((a.x*a.x+a.y*a.y)*(c.x-b.x) + (b.x*b.x+b.y*b.y)*(a.x-c.x) + (c.x*c.x+c.y*c.y)*(b.x-a.x))/d;
+  return {ux, uy, r2:(ux-a.x)**2 + (uy-a.y)**2};
+}
+function delaunay(points){
+  if(points.length < 3) return [];
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const p of points){ minX=Math.min(minX,p.x); maxX=Math.max(maxX,p.x); minY=Math.min(minY,p.y); maxY=Math.max(maxY,p.y); }
+  const dmax = Math.max(maxX-minX||1, maxY-minY||1);
+  const midx=(minX+maxX)/2, midy=(minY+maxY)/2;
+  const st=[{x:midx-20*dmax,y:midy-dmax,i:-1},{x:midx,y:midy+20*dmax,i:-2},{x:midx+20*dmax,y:midy-dmax,i:-3}];
+  let tris=[{a:st[0],b:st[1],c:st[2]}];
+  for(const p of points){
+    const bad=[];
+    for(const t of tris){
+      const cc=tinCircumcircle(t.a,t.b,t.c);
+      if(!cc) continue;
+      if((p.x-cc.ux)**2 + (p.y-cc.uy)**2 <= cc.r2*(1+1e-12)) bad.push(t);
+    }
+    const edges=[];
+    for(const t of bad) edges.push([t.a,t.b],[t.b,t.c],[t.c,t.a]);
+    const boundary=[];
+    for(let i=0;i<edges.length;i++){
+      let shared=false;
+      for(let j=0;j<edges.length;j++){
+        if(i===j) continue;
+        const [p1,q1]=edges[i], [p2,q2]=edges[j];
+        if((p1===p2&&q1===q2)||(p1===q2&&q1===p2)){ shared=true; break; }
+      }
+      if(!shared) boundary.push(edges[i]);
+    }
+    tris = tris.filter(t=>!bad.includes(t));
+    for(const [p1,q1] of boundary) tris.push({a:p1,b:q1,c:p});
+  }
+  return tris.filter(t=>t.a.i>=0 && t.b.i>=0 && t.c.i>=0);
+}
+function triArea2(A,B,C){ return Math.abs((B.x-A.x)*(C.y-A.y) - (C.x-A.x)*(B.y-A.y))/2; }
+function triPrism(A,B,C){ return triArea2(A,B,C) * (A.h+B.h+C.h)/3; }
+function triLerp(A,B,t){ return {x:A.x+t*(B.x-A.x), y:A.y+t*(B.y-A.y), h:A.h+t*(B.h-A.h)}; }
+function triVolume(A,B,C){
+  const EPS=1e-12;
+  const hs=[A.h,B.h,C.h];
+  const pos=hs.filter(h=>h>EPS).length, neg=hs.filter(h=>h<-EPS).length;
+  if(neg===0) return {cut:triPrism(A,B,C), fill:0};
+  if(pos===0) return {cut:0, fill:-triPrism(A,B,C)};
+  const v=[A,B,C];
+  let lone=-1;
+  for(let i=0;i<3;i++){
+    const a=v[i], b=v[(i+1)%3], c=v[(i+2)%3];
+    if((a.h>EPS && b.h<=EPS && c.h<=EPS) || (a.h<-EPS && b.h>=-EPS && c.h>=-EPS)){ lone=i; break; }
+  }
+  if(lone<0){ const p=triPrism(A,B,C); return {cut:Math.max(0,p), fill:Math.max(0,-p)}; }
+  const Av=v[lone], Bv=v[(lone+1)%3], Cv=v[(lone+2)%3];
+  const P=triLerp(Av,Bv, Av.h/(Av.h-Bv.h));
+  const Q=triLerp(Av,Cv, Av.h/(Av.h-Cv.h));
+  const vA=triPrism(Av,P,Q);
+  const vQuad=triPrism(P,Bv,Cv)+triPrism(P,Cv,Q);
+  return Av.h>0 ? {cut:vA, fill:-vQuad} : {cut:vQuad, fill:-vA};
+}
+function tinVolume(pts){
+  const P = pts.map((p,i)=>({x:p.e, y:p.n, h:p.h, i}));
+  const tris = delaunay(P);
+  let cut=0, fill=0, area=0;
+  for(const t of tris){
+    const r=triVolume(t.a,t.b,t.c);
+    cut+=r.cut; fill+=r.fill;
+    area+=triArea2(t.a,t.b,t.c);
+  }
+  return {cut, fill, net:cut-fill, area, tris};
+}
+
+/* =====================================================================
+   POLYGON SUBDIVISION GEOMETRY
+   Signed side value: positive on the left of the direction of travel.
+===================================================================== */
+function sideValue(p, origin, az){
+  const r = az*D2R;
+  return Math.cos(r)*(p.e-origin.e) - Math.sin(r)*(p.n-origin.n);
+}
+/* Sutherland–Hodgman: keep the part of poly where f(p) <= 0 */
+function clipHalfPlane(poly, f){
+  const out=[];
+  for(let i=0;i<poly.length;i++){
+    const A=poly[i], B=poly[(i+1)%poly.length];
+    const fa=f(A), fb=f(B);
+    if(fa<=0) out.push(A);
+    if((fa<=0) !== (fb<=0)){
+      const t = fa/(fa-fb);
+      out.push({ n:A.n+t*(B.n-A.n), e:A.e+t*(B.e-A.e) });
+    }
+  }
+  return dedupePoly(out);
+}
+/* Drop consecutive duplicate vertices (happens when the cut passes a corner) */
+function dedupePoly(poly, tol){
+  tol = tol || 1e-7;
+  const out=[];
+  for(const p of poly){
+    const last = out[out.length-1];
+    if(!last || Math.hypot(p.n-last.n, p.e-last.e) > tol) out.push(p);
+  }
+  while(out.length>1){
+    const a=out[0], b=out[out.length-1];
+    if(Math.hypot(a.n-b.n, a.e-b.e) <= tol) out.pop(); else break;
+  }
+  return out;
+}
+/* Cut off `targetArea` with a line of fixed azimuth, slid across the polygon */
+function cutParallel(poly, az, targetArea){
+  const total = shoelaceArea(poly);
+  if(!(targetArea>0) || targetArea>=total) return {error:'เนื้อที่เป้าหมายต้องมากกว่า 0 และน้อยกว่าพื้นที่ทั้งแปลง'};
+  const origin = poly[0];
+  const vals = poly.map(p=>sideValue(p, origin, az));
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const clipAt = c => clipHalfPlane(poly, p=>sideValue(p,origin,az)-c);
+  for(let it=0; it<100; it++){
+    const mid=(lo+hi)/2;
+    if(shoelaceArea(clipAt(mid)) < targetArea) lo=mid; else hi=mid;
+  }
+  const c=(lo+hi)/2;
+  const piece = clipAt(c);
+  const rest  = clipHalfPlane(poly, p=>-(sideValue(p,origin,az)-c));
+  if(piece.length<3 || rest.length<3) return {error:'แบ่งไม่สำเร็จ ลองเปลี่ยนทิศเส้นแบ่งหรือเนื้อที่เป้าหมาย'};
+  return {piece, rest, achieved:shoelaceArea(piece)};
+}
+/* Cut off `targetArea` with a line pivoting about a fixed point */
+function cutThroughPoint(poly, pivot, targetArea){
+  const total = shoelaceArea(poly);
+  if(!(targetArea>0) || targetArea>=total) return {error:'เนื้อที่เป้าหมายต้องมากกว่า 0 และน้อยกว่าพื้นที่ทั้งแปลง'};
+  const areaAt = az => shoelaceArea(clipHalfPlane(poly, p=>sideValue(p,pivot,az)));
+  let bracket=null;
+  const N=720;
+  for(let i=0;i<N;i++){
+    const a1=i*360/N, a2=(i+1)*360/N;
+    const f1=areaAt(a1)-targetArea, f2=areaAt(a2)-targetArea;
+    if(f1===0){ bracket=[a1,a1]; break; }
+    if(f1*f2<0){ bracket=[a1,a2]; break; }
+  }
+  if(!bracket) return {error:'ไม่พบเส้นแบ่งที่ลากผ่านจุดนี้แล้วได้เนื้อที่ตามต้องการ — ลองเลือกจุดอื่น'};
+  let [lo,hi]=bracket;
+  for(let it=0; it<80; it++){
+    const mid=(lo+hi)/2;
+    const fl=areaAt(lo)-targetArea, fm=areaAt(mid)-targetArea;
+    if(fl*fm<=0) hi=mid; else lo=mid;
+  }
+  const az=(lo+hi)/2;
+  const piece = clipHalfPlane(poly, p=>sideValue(p,pivot,az));
+  const rest  = clipHalfPlane(poly, p=>-sideValue(p,pivot,az));
+  if(piece.length<3 || rest.length<3) return {error:'แบ่งไม่สำเร็จ ลองเลือกจุดหมุนอื่น'};
+  return {piece, rest, achieved:shoelaceArea(piece), az:norm360(az)};
+}
+
+/* =====================================================================
+   STORAGE HELPERS — three tiers, probed once and cached:
+     1. window.storage  (Claude artifact persistent storage)
+     2. localStorage    (works when the file is saved and opened locally)
+     3. memory          (this session only; user must export to a file)
+===================================================================== */
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise((_,reject)=> setTimeout(()=>reject(new Error('storage timeout')), ms))
+  ]);
+}
+
+let STORAGE_BACKEND = null;          // 'artifact' | 'local' | 'memory'
+const memStore = {};
+const LS_PREFIX = 'survey-toolkit:';
+
+async function detectBackend(){
+  if(STORAGE_BACKEND) return STORAGE_BACKEND;
+
+  // 1) Claude artifact storage — verify with a real round trip, not just typeof
+  if(window.storage && typeof window.storage.set === 'function'){
+    try{
+      await withTimeout(window.storage.set('__probe__', '1', false), 3000);
+      await withTimeout(window.storage.get('__probe__', false), 3000);
+      try{ await window.storage.delete('__probe__', false); }catch(e){}
+      STORAGE_BACKEND = 'artifact';
+      return STORAGE_BACKEND;
+    }catch(e){ /* fall through */ }
+  }
+
+  // 2) localStorage — throws in some sandboxes, so probe it too
+  try{
+    const k = LS_PREFIX + '__probe__';
+    window.localStorage.setItem(k, '1');
+    if(window.localStorage.getItem(k) === '1'){
+      window.localStorage.removeItem(k);
+      STORAGE_BACKEND = 'local';
+      return STORAGE_BACKEND;
+    }
+  }catch(e){ /* fall through */ }
+
+  STORAGE_BACKEND = 'memory';
+  return STORAGE_BACKEND;
+}
+
+async function storageSave(key, value){
+  const backend = await detectBackend();
+  const text = JSON.stringify(value);
+  try{
+    if(backend === 'artifact'){ await withTimeout(window.storage.set(key, text, false), 4000); return true; }
+    if(backend === 'local'){ window.localStorage.setItem(LS_PREFIX+key, text); return true; }
+  }catch(e){
+    // A working backend can still fail (e.g. localStorage quota). Keep the
+    // value for this session so nothing typed is lost.
+    memStore[key] = text;
+    return false;
+  }
+  memStore[key] = text;
+  return false;   // memory only: not durable, caller should warn
+}
+
+async function storageLoad(key, fallback){
+  const backend = await detectBackend();
+  try{
+    if(backend === 'artifact'){
+      const r = await withTimeout(window.storage.get(key, false), 4000);
+      if(r) return JSON.parse(r.value);
+    }
+    if(backend === 'local'){
+      const v = window.localStorage.getItem(LS_PREFIX+key);
+      if(v !== null) return JSON.parse(v);
+    }
+  }catch(e){ /* fall through to memory */ }
+  if(memStore[key] !== undefined){
+    try{ return JSON.parse(memStore[key]); }catch(e){}
+  }
+  return fallback;
+}
+
+async function storageDelete(key){
+  const backend = await detectBackend();
+  delete memStore[key];
+  try{
+    if(backend === 'artifact'){ await withTimeout(window.storage.delete(key, false), 4000); return true; }
+    if(backend === 'local'){ window.localStorage.removeItem(LS_PREFIX+key); return true; }
+  }catch(e){}
+  return false;
+}
+
+function backendLabel(){
+  switch(STORAGE_BACKEND){
+    case 'artifact': return 'บันทึกถาวรในแอป';
+    case 'local':    return 'บันทึกถาวรในเบราว์เซอร์นี้';
+    default:         return 'ชั่วคราว (ปิดแล้วหาย)';
+  }
+}
+
+/* =====================================================================
+   OUTDOOR (HIGH-CONTRAST) MODE
+===================================================================== */
+function setOutdoorMode(on, skipSave){
+  document.body.classList.toggle('outdoor', on);
+  document.getElementById('outdoorToggle').checked = on;
+  if(!skipSave) storageSave('pref-outdoor', on);
+}
+
+/* =====================================================================
+   CSV IMPORT / EXPORT HELPERS
+===================================================================== */
+function downloadCsv(csv, filename){
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function parseCsvText(text){
+  // returns array of row-arrays; tolerant of comma or tab separators, skips blank lines
+  const lines = text.split(/\r\n|\n|\r/).map(l=>l.trim()).filter(l=>l.length>0);
+  return lines.map(l=> l.split(/,|\t/).map(c=>c.trim()));
+}
+/* A row is a header only if the columns that must hold numbers don't parse
+   as numbers. Sniffing for the letters n/e breaks on point names like
+   "North1" or "BM-E1" and silently drops the first data row. */
+function looksLikeHeaderRow(r){
+  const numeric = r.slice(1).filter(c=>c!=='');
+  if(numeric.length===0) return true;
+  return numeric.every(c=>isNaN(parseFloat(c)));
+}
+function csvRowsToPoints(rows){
+  if(!rows.length) return [];
+  const start = looksLikeHeaderRow(rows[0]) ? 1 : 0;
+  const out = [];
+  for(let i=start;i<rows.length;i++){
+    const r = rows[i];
+    if(r.length>=3){
+      // name, N, E, [Z]
+      out.push({ name:r[0], n:r[1], e:r[2], z:r[3]!==undefined ? r[3] : '' });
+    } else if(r.length===2){
+      // N, E
+      out.push({ name:'', n:r[0], e:r[1], z:'' });
+    }
+  }
+  return out;
+}
+function triggerFileImport(onRows){
+  const inp = document.getElementById('csvFileInput');
+  inp.value = '';
+  inp.onchange = (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      const rows = parseCsvText(ev.target.result);
+      const pts = csvRowsToPoints(rows);
+      onRows(pts);
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+  inp.click();
+}
+
+
+/* =====================================================================
+   TAB DEFINITIONS
+===================================================================== */
+const TABS = [
+  {id:'library', label:'📍 คลังพิกัด'},
+  {id:'project', label:'💾 โปรเจกต์'},
+  {id:'traverse', label:'Traverse'},
+  {id:'inverse', label:'Inverse'},
+  {id:'area', label:'พื้นที่'},
+  {id:'subdiv', label:'✂️ แบ่งพื้นที่'},
+  {id:'level', label:'⛰️ ระดับ/งานดิน'},
+  {id:'curve', label:'🛤️ โค้ง'},
+  {id:'intersect', label:'จุดตัด'},
+  {id:'transform', label:'แปลงพิกัด'},
+  {id:'resection', label:'รีเซคชั่น'},
+  {id:'radiation', label:'อะซิมุท-ระยะ'},
+  {id:'p2l', label:'เช็คออฟเซ็ต'},
+  {id:'offset', label:'ออฟเซ็ต'},
+  {id:'stakeout', label:'📌 Stakeout Sheet'},
+];
+let currentTab = 'traverse';
+
+function buildTabBar(){
+  const bar = document.getElementById('tabBar');
+  bar.innerHTML = TABS.map(t=>`<div class="tab ${t.id===currentTab?'active':''}" onclick="switchTab('${t.id}')">${t.label}</div>`).join('');
+}
+function switchTab(id){ currentTab = id; buildTabBar(); renderTab(id); window.scrollTo(0,0); }
+
+function renderTab(id){
+  const c = document.getElementById('content');
+  const renderers = {
+    library: renderLibrary, project: renderProject,
+    traverse: renderTraverse, inverse: renderInverse, area: renderArea,
+    subdiv: renderSubdiv, level: renderLevel, curve: renderCurve,
+    intersect: renderIntersect, transform: renderTransform, resection: renderResection,
+    radiation: renderRadiation, p2l: renderP2L, offset: renderOffset, stakeout: renderStakeout
+  };
+  c.innerHTML = '';
+  renderers[id]();
+}
+
+/* =====================================================================
+   MODULE 0: POINT LIBRARY — save/load named points, persisted on-device,
+   with CSV import/export. Z is stored/exported here but not used in the
+   2D plan calculations of the other modules.
+===================================================================== */
+let libPoints = [];
+let libLoaded = false;
+async function ensureLibLoaded(){
+  if(!libLoaded){ libPoints = await storageLoad('point-library', []); libLoaded = true; }
+}
+async function renderLibrary(){
+  await ensureLibLoaded();
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>📍 คลังพิกัด <span class="pill">${libPoints.length} จุด</span></h2>
+    <p class="desc">เก็บพิกัดที่ใช้ประจำไว้ในเครื่องนี้ (ชื่อจุด, N, E, Z) แล้วเรียกใช้ซ้ำได้จากทุกโมดูลที่มีปุ่ม "เติมจากคลัง" ข้อมูลจะถูกบันทึกอัตโนมัติเมื่อกดบันทึก</p>
+    <div id="lib_rows"></div>
+    <div class="btn-row">
+      <button class="btn-secondary btn-small" onclick="libAddRow()">+ เพิ่มจุด</button>
+      <label class="filebtn">นำเข้า CSV<input type="file" accept=".csv,.txt" onchange="libImportFile(event)"></label>
+      <button class="btn-secondary btn-small" onclick="libExport()">ส่งออก CSV</button>
+      <button class="btn-primary" onclick="libSave()">บันทึกคลัง</button>
+    </div>
+    <div id="lib_msg"></div>
+    <div class="note">รูปแบบ CSV: <span class="mono">ชื่อจุด,N,E,Z</span> (มีหรือไม่มีหัวตารางก็ได้ ถ้าไม่มีชื่อจุดใช้ 2 คอลัมน์ N,E ก็ได้)</div>
+  </div>`;
+  libRenderRows();
+}
+function libRenderRows(){
+  const el = document.getElementById('lib_rows');
+  if(libPoints.length===0){ el.innerHTML = `<div class="desc">ยังไม่มีจุดในคลัง — กด "+ เพิ่มจุด" หรือ "นำเข้า CSV"</div>`; return; }
+  el.innerHTML = libPoints.map((p,i)=>`
+    <div class="lib-row">
+      <div class="field" style="flex:1 1 90px;"><label>ชื่อจุด</label><input value="${esc(p.name)}" oninput="libPoints[${i}].name=this.value"></div>
+      <div class="field"><label>N</label><input type="number" step="any" value="${esc(p.n)}" oninput="libPoints[${i}].n=this.value"></div>
+      <div class="field"><label>E</label><input type="number" step="any" value="${esc(p.e)}" oninput="libPoints[${i}].e=this.value"></div>
+      <div class="field"><label>Z</label><input type="number" step="any" value="${esc(p.z)}" oninput="libPoints[${i}].z=this.value"></div>
+      <button class="btn-danger" onclick="libRemoveRow(${i})">ลบ</button>
+    </div>`).join('');
+}
+function libAddRow(){ libPoints.push({name:'', n:'', e:'', z:''}); libRenderRows(); document.querySelector('.card h2 .pill').textContent = libPoints.length+' จุด'; }
+function libRemoveRow(i){ libPoints.splice(i,1); libRenderRows(); document.querySelector('.card h2 .pill').textContent = libPoints.length+' จุด'; }
+function libImportFile(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const rows = parseCsvText(ev.target.result);
+    const pts = csvRowsToPoints(rows);
+    libPoints = libPoints.concat(pts);
+    libRenderRows();
+    document.querySelector('.card h2 .pill').textContent = libPoints.length+' จุด';
+    document.getElementById('lib_msg').innerHTML = `<div class="note">นำเข้า ${pts.length} จุดแล้ว — อย่าลืมกด "บันทึกคลัง"</div>`;
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+function libExport(){
+  let csv = 'name,N,E,Z\n' + libPoints.map(p=>`${p.name||''},${p.n},${p.e},${p.z||''}`).join('\n');
+  downloadCsv(csv, 'point_library.csv');
+}
+async function libSave(){
+  document.getElementById('lib_msg').innerHTML = `<div class="note">กำลังบันทึก...</div>`;
+  const ok = await storageSave('point-library', libPoints);
+  document.getElementById('lib_msg').innerHTML = ok
+    ? `<div class="note" style="color:var(--pine);font-weight:600;">✓ บันทึกคลังพิกัด ${libPoints.length} จุดแล้ว (${backendLabel()})</div>`
+    : `<div class="error-box">เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกถาวร ข้อมูลจะอยู่แค่ในหน้านี้จนกว่าจะปิด — กด "ส่งออก CSV" เพื่อสำรองไฟล์ไว้ หรือดาวน์โหลดไฟล์ HTML ไปเปิดในเครื่อง แล้วการบันทึกจะใช้งานได้</div>`;
+}
+/* Append valid library points into a target array, then re-render.
+   Carries the point name through for modules that display one. */
+function libInsertAllInto(targetArr, rerenderFn){
+  const valid = libPoints.filter(p=>p.n!=='' && p.e!=='' && !isNaN(parseFloat(p.n)) && !isNaN(parseFloat(p.e)));
+  if(valid.length===0){ alert('คลังพิกัดว่างเปล่า หรือยังไม่มีจุดที่มีค่า N,E ครบ'); return; }
+  valid.forEach(p=> targetArr.push({name:p.name||'', n:p.n, e:p.e}));
+  rerenderFn();
+}
+
+
+let travAngleMode = 'az'; // 'az', 'intang', 'extang'
+let travLegCount = 1; // Track number of legs without state array
+let travStart = { n:'', e:'', az0:'', closed:'1' };
+let travLegCache = [];
+
+// Read leg values from the DOM; fall back to the cache when inputs are absent
+// (e.g. right after a full card re-render).
+function tvReadLegs(){
+  const legs = [];
+  for(let i = 0; i < travLegCount; i++){
+    const cached = travLegCache[i] || {};
+    const modeEl = document.querySelector(`[data-leg-mode="${i}"]`);
+    const azEl   = document.querySelector(`[data-leg-az="${i}"]`);
+    const baEl   = document.querySelector(`[data-leg-ba="${i}"]`);
+    const bqEl   = document.querySelector(`[data-leg-bq="${i}"]`);
+    const distEl = document.querySelector(`[data-leg-dist="${i}"]`);
+
+    legs.push({
+      i,
+      mode: modeEl ? modeEl.value : (cached.mode || 'az'),
+      az:   azEl   ? azEl.value   : (cached.az   || ''),
+      ba:   baEl   ? baEl.value   : (cached.ba   || ''),
+      bq:   bqEl   ? bqEl.value   : (cached.bq   || 'NE'),
+      dist: distEl ? distEl.value : (cached.dist || '')
+    });
+  }
+  return legs;
+}
+function renderTraverse(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>🧭 Traverse ปิด/เปิด + Bowditch</h2>
+    <p class="desc">ใส่พิกัดเริ่มต้น แล้วเพิ่มเส้นขา (มุม + ระยะ) ทีละเส้น หากเป็นวงรอบปิด ระบบจะปรับแก้มุม แล้วปรับแก้พิกัดแบบ Bowditch และคำนวณพื้นที่ให้อัตโนมัติ</p>
+    <div class="field-row">
+      <div class="field"><label>N เริ่มต้น</label><input id="tv_n0" type="number" step="any" placeholder="0.000" value="${esc(travStart.n)}" oninput="travStart.n=this.value"></div>
+      <div class="field"><label>E เริ่มต้น</label><input id="tv_e0" type="number" step="any" placeholder="0.000" value="${esc(travStart.e)}" oninput="travStart.e=this.value"></div>
+      <div class="field"><label>ลักษณะวงรอบ</label>
+        <select id="tv_closed" onchange="travStart.closed=this.value">
+          <option value="1" ${travStart.closed==='1'?'selected':''}>ปิด (Closed)</option>
+          <option value="0" ${travStart.closed==='0'?'selected':''}>เปิด (Open)</option>
+        </select>
+      </div>
+    </div>
+    <div class="seg">
+      <button class="${travAngleMode==='az'?'on':''}" onclick="setTravAngleMode('az')">Azimuth / Bearing</button>
+      <button class="${travAngleMode==='intang'?'on':''}" onclick="setTravAngleMode('intang')">มุมภายใน</button>
+      <button class="${travAngleMode==='extang'?'on':''}" onclick="setTravAngleMode('extang')">มุมภายนอก</button>
+    </div>
+    ${travAngleMode==='az' ? '' : `
+    <div class="field-row">
+      <div class="field"><label>Azimuth เริ่มต้น (ขาที่ 1)</label><input id="tv_az0" type="number" step="any" placeholder="เช่น 90.0000" value="${esc(travStart.az0)}" oninput="travStart.az0=this.value"></div>
+    </div>
+    <div class="note">โหมดนี้กรอก<strong>มุมทุกสถานี</strong> (${travAngleMode==='intang'?'มุมภายใน':'มุมภายนอก'}) ครบทุกเส้นขา ระบบจะตรวจผลรวมมุมและเฉลี่ยแก้ให้ก่อนคำนวณพิกัด</div>
+    `}
+    <hr class="div">
+    <div id="tv_legs"></div>
+    <div class="btn-row">
+      <button class="btn-secondary btn-small" onclick="tvAddLeg()">+ เพิ่มเส้นขา</button>
+      <button class="btn-primary" onclick="tvCalc()">คำนวณ</button>
+    </div>
+    <div id="tv_result"></div>
+  </div>`;
+  tvRenderLegs();
+}
+
+// New tvRenderLegs that uses DOM-based leg count below
+
+function tvRenderLegs(){
+  const el = document.getElementById('tv_legs');
+  const legs = tvReadLegs();
+  travLegCache = legs;
+
+  if(travAngleMode==='az'){
+    el.innerHTML = legs.map((leg)=>`
+    <div class="rowline" data-leg-index="${leg.i}">
+      <div class="idx">${leg.i+1}</div>
+      <div class="field" style="flex:0 0 78px;">
+        <label>รูปแบบ</label>
+        <select data-leg-mode="${leg.i}" onchange="tvRenderLegs()">
+          <option value="az" ${leg.mode==='az'?'selected':''}>Azimuth</option>
+          <option value="bear" ${leg.mode==='bear'?'selected':''}>Bearing</option>
+        </select>
+      </div>
+      ${leg.mode==='bear' ? `
+      <div class="field" style="flex:0 0 54px;"><label>ทิศ</label>
+        <select data-leg-bq="${leg.i}">
+          <option ${leg.bq==='NE'?'selected':''}>NE</option><option ${leg.bq==='SE'?'selected':''}>SE</option>
+          <option ${leg.bq==='SW'?'selected':''}>SW</option><option ${leg.bq==='NW'?'selected':''}>NW</option>
+        </select>
+      </div>
+      <div class="field"><label>มุม</label><input data-leg-ba="${leg.i}" type="number" step="any" value="${esc(leg.ba)}"></div>
+      ` : `
+      <div class="field"><label>Azimuth</label><input data-leg-az="${leg.i}" type="number" step="any" value="${esc(leg.az)}"></div>
+      `}
+      <div class="field"><label>ระยะ (ม.)</label><input data-leg-dist="${leg.i}" type="number" step="any" value="${esc(leg.dist)}"></div>
+      <button class="btn-danger" onclick="tvRemoveLeg(${leg.i})">ลบ</button>
+    </div>
+  `).join('');
+  } else {
+    const angLabel = travAngleMode==='intang' ? 'มุมภายใน (°)' : 'มุมภายนอก (°)';
+    el.innerHTML = legs.map((leg)=>`
+    <div class="rowline" data-leg-index="${leg.i}">
+      <div class="idx">${leg.i+1}</div>
+      <div class="field"><label>${angLabel} ที่สถานี ${leg.i+1}</label><input data-leg-az="${leg.i}" type="number" step="any" value="${esc(leg.az)}"></div>
+      <div class="field"><label>ระยะ (ม.)</label><input data-leg-dist="${leg.i}" type="number" step="any" value="${esc(leg.dist)}"></div>
+      <button class="btn-danger" onclick="tvRemoveLeg(${leg.i})">ลบ</button>
+    </div>
+  `).join('');
+  }
+}
+function tvAddLeg(){
+  travLegCount++;
+  tvRenderLegs();
+}
+function tvRemoveLeg(i){
+  if(travLegCount > 1){
+    travLegCount--;
+    tvRenderLegs();
+  }
+}
+function setTravAngleMode(m){
+  travAngleMode = m;
+  renderTraverse(); // re-render whole card: start-azimuth field appears/disappears
+}
+
+
+
+function tvCalc(){
+  const n0=parseFloat(document.getElementById('tv_n0').value);
+  const e0=parseFloat(document.getElementById('tv_e0').value);
+  const closed = document.getElementById('tv_closed').value==='1';
+  const res = document.getElementById('tv_result');
+  if(isNaN(n0)||isNaN(e0)){ res.innerHTML = `<div class="error-box">กรุณาใส่พิกัดเริ่มต้น N, E ให้ครบ</div>`; return; }
+
+  const raw = tvReadLegs();
+  travLegCache = raw;
+  const n = raw.length;
+
+  // --- distances (all modes) ---
+  const dists = [];
+  for(let i=0;i<n;i++){
+    const d = parseFloat(raw[i].dist);
+    if(isNaN(d) || d<=0){ res.innerHTML = `<div class="error-box">เส้นขาที่ ${i+1}: กรอกระยะให้ถูกต้อง</div>`; return; }
+    dists.push(d);
+  }
+
+  // --- azimuths ---
+  let azs = [];
+  let angInfo = null;  // angular closure report (angle modes only)
+
+  if(travAngleMode==='az'){
+    for(let i=0;i<n;i++){
+      let az;
+      if(raw[i].mode==='bear'){
+        const a = angToDeg(raw[i].ba);
+        if(isNaN(a)){ res.innerHTML = `<div class="error-box">เส้นขาที่ ${i+1}: กรอกมุมแบริ่งให้ครบ</div>`; return; }
+        switch(raw[i].bq){
+          case 'NE': az = a; break;
+          case 'SE': az = 180-a; break;
+          case 'SW': az = 180+a; break;
+          default:   az = 360-a; break;
+        }
+      } else {
+        az = angToDeg(raw[i].az);
+        if(isNaN(az)){ res.innerHTML = `<div class="error-box">เส้นขาที่ ${i+1}: กรอก Azimuth ให้ครบ</div>`; return; }
+      }
+      azs.push(norm360(az));
+    }
+  } else {
+    const az0 = angToDeg(document.getElementById('tv_az0').value);
+    if(isNaN(az0)){ res.innerHTML = `<div class="error-box">กรุณาใส่ Azimuth เริ่มต้นของเส้นขาที่ 1</div>`; return; }
+
+    const angles = [];
+    for(let i=0;i<n;i++){
+      const a = angToDeg(raw[i].az);
+      if(isNaN(a)){ res.innerHTML = `<div class="error-box">สถานีที่ ${i+1}: กรอกมุมให้ครบ</div>`; return; }
+      angles.push(a);
+    }
+
+    let adjAngles = angles.slice();
+    if(closed){
+      if(n < 3){ res.innerHTML = `<div class="error-box">วงรอบปิดต้องมีอย่างน้อย 3 เส้นขา</div>`; return; }
+      // Interior: sum = (n-2)*180  |  Exterior: sum = (n+2)*180
+      const theo = travAngleMode==='intang' ? (n-2)*180 : (n+2)*180;
+      const sum  = angles.reduce((a,b)=>a+b, 0);
+      const err  = sum - theo;              // degrees
+      const corr = -err / n;                // spread equally
+      adjAngles  = angles.map(a=> a + corr);
+      angInfo = {theo, sum, err, corr, n};
+    }
+
+    azs = [norm360(az0)];
+    for(let i=1;i<n;i++){
+      const prev = azs[i-1];
+      const az = travAngleMode==='intang'
+        ? norm360(prev + 180 - adjAngles[i])
+        : norm360(prev + adjAngles[i] - 180);
+      azs.push(az);
+    }
+  }
+
+  const legs = azs.map((az,i)=>({az, dist:dists[i]}));
+
+  let pts=[{n:n0,e:e0}], cum=[0], total=0;
+  for(const leg of legs){
+    const rad=leg.az*D2R, last=pts[pts.length-1];
+    pts.push({ n:last.n+leg.dist*Math.cos(rad), e:last.e+leg.dist*Math.sin(rad) });
+    total+=leg.dist; cum.push(total);
+  }
+  let html = '';
+  let adjusted = null;
+
+  // --- Angular closure report (angle modes, closed loop) ---
+  if(angInfo){
+    const errSec = angInfo.err * 3600;
+    const corrSec = angInfo.corr * 3600;
+    // Common field tolerance: 60" * sqrt(n)
+    const tolSec = 60 * Math.sqrt(angInfo.n);
+    const ok = Math.abs(errSec) <= tolSec;
+    html += `
+      <div class="result">
+        <h3>ปรับแก้มุม (Angular Closure)</h3>
+        <div class="stat-grid">
+          <div class="stat"><div class="lbl">ผลรวมมุมที่วัดได้</div><div class="val">${fmt(angInfo.sum,4)}°</div></div>
+          <div class="stat"><div class="lbl">ผลรวมตามทฤษฎี</div><div class="val">${angInfo.theo}°</div></div>
+          <div class="stat ${ok?'good':'bad'}"><div class="lbl">คลาดเคลื่อนเชิงมุม</div><div class="val">${errSec>=0?'+':''}${fmt(errSec,1)}″</div></div>
+          <div class="stat"><div class="lbl">แก้ต่อสถานี</div><div class="val">${corrSec>=0?'+':''}${fmt(corrSec,1)}″</div></div>
+        </div>
+        <div class="note">${ok
+          ? `อยู่ในเกณฑ์ยอมรับ (±${fmt(tolSec,0)}″ = 60″√${angInfo.n})`
+          : `<strong>เกินเกณฑ์</strong> ±${fmt(tolSec,0)}″ — ควรตรวจสอบการวัดมุมในสนามก่อนใช้ผลนี้`}</div>
+      </div>`;
+  }
+
+  // --- Per-leg azimuth table ---
+  html += `
+    <div class="result">
+      <h3>อะซิมุทและระยะรายเส้นขา</h3>
+      <table><tr><th>ขา</th><th>Azimuth</th><th>แบริ่ง</th><th>ระยะ (ม.)</th></tr>
+      ${legs.map((l,i)=>`<tr><td>${i+1}</td><td>${dmsPretty(l.az)}</td><td>${azToBearingStr(l.az)}</td><td>${fmt(l.dist,3)}</td></tr>`).join('')}
+      </table>
+    </div>`;
+
+  if(closed){
+    const last=pts[pts.length-1];
+    const closN=last.n-n0, closE=last.e-e0;
+    const misclosure=Math.hypot(closN,closE);
+    adjusted = pts.map((p,i)=>{
+      if(i===0) return {n:n0,e:e0};
+      const cN=-closN*(cum[i]/total), cE=-closE*(cum[i]/total);
+      return {n:p.n+cN, e:p.e+cE};
+    });
+    adjusted[adjusted.length-1]={n:n0,e:e0};
+    const precision = misclosure>1e-9 ? total/misclosure : Infinity;
+    const area = shoelaceArea(adjusted.slice(0,-1));
+    const precisionLabel = isFinite(precision) ? `1 : ${Math.round(precision)}` : 'สมบูรณ์';
+    const statClass = precision>3000 ? 'good' : (precision>1000?'warn':'bad');
+    html += `
+      <div class="result">
+        <h4>ผลตรวจสอบวงรอบ (Closure Check)</h4>
+        <div class="stat-grid">
+          <div class="stat"><div class="lbl">ผลบวก ΔN / ΔE</div><div class="val">${fmt(closN,4)} / ${fmt(closE,4)}</div></div>
+          <div class="stat"><div class="lbl">ระยะคลาดเคลื่อนเชิงเส้น</div><div class="val">${fmt(misclosure,4)} ม.</div></div>
+          <div class="stat ${statClass}"><div class="lbl">อัตราส่วนความละเอียด</div><div class="val">${precisionLabel}</div></div>
+          <div class="stat"><div class="lbl">ความยาวรอบรูป</div><div class="val">${fmt(total,3)} ม.</div></div>
+        </div>
+      </div>
+      <div class="result">
+        <h3>พื้นที่ (จากพิกัดที่ปรับแก้แล้ว)</h3>
+        <div class="stat-grid">
+          <div class="stat"><div class="lbl">พื้นที่ตารางเมตร</div><div class="val">${fmt(area,2)}</div></div>
+          <div class="stat good"><div class="lbl">หน่วยไทย</div><div class="val" style="font-size:13px;">${thaiAreaStr(area)}</div></div>
+        </div>
+      </div>
+      <div class="result">
+        <h3>พิกัดจุด (ปรับแก้ Bowditch แล้ว)</h3>
+        <table><tr><th>จุด</th><th>N (ก่อนแก้)</th><th>E (ก่อนแก้)</th><th>N (แก้แล้ว)</th><th>E (แก้แล้ว)</th></tr>
+        ${adjusted.map((p,i)=>`<tr><td>${i}</td><td>${fmt(pts[i].n)}</td><td>${fmt(pts[i].e)}</td><td>${fmt(p.n)}</td><td>${fmt(p.e)}</td></tr>`).join('')}
+        </table>
+        <div class="btn-row"><button class="btn-secondary btn-small" onclick='tvExport(${JSON.stringify(adjusted)})'>ส่งออก CSV</button><button class="btn-secondary btn-small" onclick='tvExportAutoCAD(${JSON.stringify(adjusted)}, true)'>🔨 AutoCAD</button></div>
+      </div>`;
+  } else {
+    html += `
+      <div class="result">
+        <h3>พิกัดจุด (Traverse เปิด)</h3>
+        <table><tr><th>จุด</th><th>N</th><th>E</th></tr>
+        ${pts.map((p,i)=>`<tr><td>${i}</td><td>${fmt(p.n)}</td><td>${fmt(p.e)}</td></tr>`).join('')}
+        </table>
+        <div class="stat-grid"><div class="stat"><div class="lbl">ระยะรวม</div><div class="val">${fmt(total,3)} ม.</div></div></div>
+        <div class="btn-row"><button class="btn-secondary btn-small" onclick='tvExport(${JSON.stringify(pts)})'>ส่งออก CSV</button><button class="btn-secondary btn-small" onclick='tvExportAutoCAD(${JSON.stringify(pts)}, false)'>🔨 AutoCAD</button></div>
+      </div>`;
+  }
+  res.innerHTML = html;
+  const plotPts = closed ? adjusted.slice(0,-1) : pts;
+  attachPlot(res, plotPts, closed);
+}
+function tvExport(pts){
+  let csv = 'Point,N,E\n' + pts.map((p,i)=>`${i},${p.n.toFixed(4)},${p.e.toFixed(4)}`).join('\n');
+  downloadCsv(csv, 'traverse_coordinates.csv');
+}
+
+/* ---------------------------------------------------------------
+   AutoCAD LT script (.scr) export.
+   LT has no AutoLISP/ActiveX, so this emits plain command lines.
+   A newline in a .scr file is an Enter keypress.
+   Commands are prefixed with _. to be language-independent.
+--------------------------------------------------------------- */
+function buildScr(pts, closed, opts){
+  opts = opts || {};
+  const prefix = opts.prefix || 'P';
+  // Auto-size text/point marks from the extents of the figure
+  let minN=pts[0].n, maxN=pts[0].n, minE=pts[0].e, maxE=pts[0].e;
+  for(const p of pts){
+    minN=Math.min(minN,p.n); maxN=Math.max(maxN,p.n);
+    minE=Math.min(minE,p.e); maxE=Math.max(maxE,p.e);
+  }
+  const span = Math.max(maxN-minN, maxE-minE) || 100;
+  const txtH = Math.max(0.2, span/60);      // readable label height
+  const off  = txtH * 0.6;                  // label offset from the node
+
+  const xy = p => `${p.e.toFixed(4)},${p.n.toFixed(4)}`;
+  let s = '';
+  s += '; ---------------------------------------------\n';
+  s += '; Survey Toolkit - traverse export for AutoCAD LT\n';
+  s += '; Coordinates written as E,N (AutoCAD X,Y)\n';
+  s += '; Run with:  SCRIPT  then pick this file\n';
+  s += '; ---------------------------------------------\n';
+  // System variables must go through SETVAR, not be called as commands
+  s += '_.SETVAR\nOSMODE\n0\n';    // disable object snap so points land exactly
+  s += '_.SETVAR\nPDMODE\n34\n';   // circle + dot marker
+  s += '_.SETVAR\nPDSIZE\n-3\n';   // 3% of viewport: stays readable when zooming
+
+  // -LAYER: _M makes+sets current, _C sets colour for the current layer
+  s += '_.-LAYER\n_M\nSRV-PNT\n_C\n2\n\n\n';   // yellow
+  for(const p of pts) s += `_.POINT\n${xy(p)}\n`;
+
+  s += '_.-LAYER\n_M\nSRV-TXT\n_C\n7\n\n\n';   // white/black
+  pts.forEach((p,i)=>{
+    const lp = {n: p.n + off, e: p.e + off};
+    // TEXT: start point, height, rotation, string, then a BLANK line to end
+    // (TEXT keeps asking for further lines until an empty Enter)
+    s += `_.TEXT\n${xy(lp)}\n${txtH.toFixed(3)}\n0\n${prefix}${i}\n\n`;
+  });
+
+  s += '_.-LAYER\n_M\nSRV-LINE\n_C\n1\n\n\n';  // red
+  s += '_.PLINE\n';
+  // For a closed loop the caller passes unique vertices only; _C closes it.
+  for(const p of pts) s += `${xy(p)}\n`;
+  s += closed ? '_C\n' : '\n';
+
+  s += '_.-LAYER\n_S\n0\n\n';      // back to layer 0
+  s += '_.SETVAR\nOSMODE\n4133\n'; // restore a sane default snap set
+  s += '_.ZOOM\n_E\n';
+  return s;
+}
+
+function downloadText(text, filename){
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function tvExportAutoCAD(pts, closed){
+  // Drop the duplicated closing vertex; _C in PLINE closes the figure
+  let verts = pts;
+  if(closed && verts.length>2){
+    const a = verts[0], b = verts[verts.length-1];
+    if(Math.hypot(a.n-b.n, a.e-b.e) < 1e-6) verts = verts.slice(0,-1);
+  }
+  downloadText(buildScr(verts, !!closed), 'traverse.scr');
+}
+
+/* =====================================================================
+   MODULE 2: INVERSE
+===================================================================== */
+let invPts = [ {n:'', e:''}, {n:'', e:''} ];
+function renderInverse(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>📐 Inverse — พิกัด 2 จุด → ระยะ &amp; แบริ่ง</h2>
+    <p class="desc">ใส่รายการพิกัดตามลำดับ ระบบจะคำนวณระยะและแบริ่งระหว่างจุดที่ต่อเนื่องกันให้ทั้งหมด</p>
+    <div id="inv_pts"></div>
+    <div class="btn-row">
+      <button class="btn-secondary btn-small" onclick="invAddPt()">+ เพิ่มจุด</button>
+      <button class="btn-secondary btn-small" onclick="invFromLib()">เติมจากคลัง</button>
+      <button class="btn-secondary btn-small" onclick="triggerFileImport(invImportRows)">นำเข้า CSV</button>
+      <button class="btn-secondary btn-small" onclick="invExportPts()">ส่งออกพิกัด CSV</button>
+    </div>
+    <div class="btn-row"><button class="btn-primary" onclick="invCalc()">คำนวณ</button></div>
+    <div id="inv_result"></div>
+  </div>`;
+  invRenderPts();
+}
+function invFromLib(){ libInsertAllInto(invPts, invRenderPts); }
+function invImportRows(pts){ pts.forEach(p=>invPts.push({n:p.n,e:p.e})); invRenderPts(); }
+function invExportPts(){
+  const csv='N,E\n'+invPts.map(p=>`${p.n},${p.e}`).join('\n');
+  downloadCsv(csv,'inverse_points.csv');
+}
+function invRenderPts(){
+  const el = document.getElementById('inv_pts');
+  el.innerHTML = invPts.map((p,i)=>`
+    <div class="rowline">
+      <div class="idx">${i+1}</div>
+      <div class="field"><label>N</label><input type="number" step="any" value="${esc(p.n)}" oninput="invPts[${i}].n=this.value"></div>
+      <div class="field"><label>E</label><input type="number" step="any" value="${esc(p.e)}" oninput="invPts[${i}].e=this.value"></div>
+      <button class="btn-danger" onclick="invRemovePt(${i})">ลบ</button>
+    </div>`).join('');
+}
+function invAddPt(){ invPts.push({n:'',e:''}); invRenderPts(); }
+function invRemovePt(i){ if(invPts.length<=2) return; invPts.splice(i,1); invRenderPts(); }
+function invCalc(){
+  const res = document.getElementById('inv_result');
+  const pts = invPts.map(p=>({n:parseFloat(p.n), e:parseFloat(p.e)}));
+  for(let i=0;i<pts.length;i++){
+    if(isNaN(pts[i].n)||isNaN(pts[i].e)){ res.innerHTML = `<div class="error-box">จุดที่ ${i+1}: กรอกพิกัด N, E ให้ครบ</div>`; return; }
+  }
+  let rows='';
+  for(let i=0;i<pts.length-1;i++){
+    const A=pts[i], B=pts[i+1];
+    const d=dist2(A,B), az=azimuth(A,B);
+    rows += `<tr><td>${i+1}→${i+2}</td><td>${fmt(d,4)}</td><td>${fmt(az,4)}°</td><td>${azToBearingStr(az)}</td></tr>`;
+  }
+  res.innerHTML = `<div class="result"><h3>ผลลัพธ์ระยะ / แบริ่ง</h3>
+    <table><tr><th>ช่วง</th><th>ระยะ (ม.)</th><th>อะซิมุท</th><th>แบริ่ง</th></tr>${rows}</table></div>`;
+  attachPlot(res, pts, false);
+}
+
+/* =====================================================================
+   MODULE 3: AREA
+===================================================================== */
+let areaPts = [ {n:'',e:''}, {n:'',e:''}, {n:'',e:''} ];
+function renderArea(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>⬡ พื้นที่จากพิกัด (Shoelace)</h2>
+    <p class="desc">ใส่พิกัดขอบเขตตามลำดับรอบรูป (ตามเข็มหรือทวนเข็มก็ได้ ระบบจะคิดค่าสัมบูรณ์) อย่างน้อย 3 จุด</p>
+    <div id="area_pts"></div>
+    <div class="btn-row">
+      <button class="btn-secondary btn-small" onclick="areaAddPt()">+ เพิ่มจุด</button>
+      <button class="btn-secondary btn-small" onclick="areaFromLib()">เติมจากคลัง</button>
+      <button class="btn-secondary btn-small" onclick="triggerFileImport(areaImportRows)">นำเข้า CSV</button>
+      <button class="btn-secondary btn-small" onclick="areaExportPts()">ส่งออกพิกัด CSV</button>
+    </div>
+    <div class="btn-row"><button class="btn-primary" onclick="areaCalc()">คำนวณ</button></div>
+    <div id="area_result"></div>
+  </div>`;
+  areaRenderPts();
+}
+function areaFromLib(){ libInsertAllInto(areaPts, areaRenderPts); }
+function areaImportRows(pts){ pts.forEach(p=>areaPts.push({n:p.n,e:p.e})); areaRenderPts(); }
+function areaExportPts(){
+  const csv='N,E\n'+areaPts.map(p=>`${p.n},${p.e}`).join('\n');
+  downloadCsv(csv,'area_points.csv');
+}
+function areaRenderPts(){
+  const el = document.getElementById('area_pts');
+  el.innerHTML = areaPts.map((p,i)=>`
+    <div class="rowline">
+      <div class="idx">${i+1}</div>
+      <div class="field"><label>N</label><input type="number" step="any" value="${esc(p.n)}" oninput="areaPts[${i}].n=this.value"></div>
+      <div class="field"><label>E</label><input type="number" step="any" value="${esc(p.e)}" oninput="areaPts[${i}].e=this.value"></div>
+      <button class="btn-danger" onclick="areaRemovePt(${i})">ลบ</button>
+    </div>`).join('');
+}
+function areaAddPt(){ areaPts.push({n:'',e:''}); areaRenderPts(); }
+function areaRemovePt(i){ if(areaPts.length<=3) return; areaPts.splice(i,1); areaRenderPts(); }
+function areaCalc(){
+  const res = document.getElementById('area_result');
+  const pts = areaPts.map(p=>({n:parseFloat(p.n), e:parseFloat(p.e)}));
+  for(let i=0;i<pts.length;i++){
+    if(isNaN(pts[i].n)||isNaN(pts[i].e)){ res.innerHTML = `<div class="error-box">จุดที่ ${i+1}: กรอกพิกัด N, E ให้ครบ</div>`; return; }
+  }
+  const area = shoelaceArea(pts);
+  let perim=0; for(let i=0;i<pts.length;i++) perim += dist2(pts[i], pts[(i+1)%pts.length]);
+  res.innerHTML = `<div class="result"><h3>ผลลัพธ์พื้นที่</h3>
+    <div class="stat-grid">
+      <div class="stat"><div class="lbl">พื้นที่ (ตร.ม.)</div><div class="val">${fmt(area,2)}</div></div>
+      <div class="stat good"><div class="lbl">หน่วยไทย</div><div class="val" style="font-size:13px;">${thaiAreaStr(area)}</div></div>
+      <div class="stat"><div class="lbl">เส้นรอบรูป (ม.)</div><div class="val">${fmt(perim,3)}</div></div>
+    </div>
+    <div class="btn-row"><button class="btn-secondary btn-small" onclick='tvExportAutoCAD(${JSON.stringify(pts)}, true)'>🔨 AutoCAD</button></div>
+    </div>`;
+  attachPlot(res, pts, true);
+}
+
+/* =====================================================================
+   MODULE 4: INTERSECTION
+===================================================================== */
+let intersectMode = 'bb';
+function renderIntersect(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>✕ จุดตัด (Intersection)</h2>
+    <p class="desc">เลือกรูปแบบการหาจุดตัดที่ต้องการ</p>
+    <div class="seg">
+      <button class="${intersectMode==='bb'?'on':''}" onclick="intSetMode('bb')">แบริ่ง-แบริ่ง</button>
+      <button class="${intersectMode==='dd'?'on':''}" onclick="intSetMode('dd')">ระยะ-ระยะ</button>
+      <button class="${intersectMode==='ll'?'on':''}" onclick="intSetMode('ll')">เส้น-เส้น</button>
+    </div>
+    <div id="int_form"></div>
+    <div class="btn-row"><button class="btn-primary" onclick="intCalc()">คำนวณ</button></div>
+    <div id="int_result"></div>
+  </div>`;
+  intRenderForm();
+}
+function intSetMode(m){ intersectMode=m; intRenderForm(); document.getElementById('int_result').innerHTML=''; renderIntersectTabsOnly(); }
+function renderIntersectTabsOnly(){
+  // just refresh segmented buttons highlight without losing input values already re-rendered by intRenderForm's parent
+  const seg = document.querySelectorAll('.seg button');
+}
+function intRenderForm(){
+  const el = document.getElementById('int_form');
+  buildTabBar(); // no-op safeguard
+  if(intersectMode==='bb'){
+    el.innerHTML = `
+    <div class="field-row">
+      <div class="field"><label>จุด A: N</label><input id="bb_an" type="number" step="any"></div>
+      <div class="field"><label>จุด A: E</label><input id="bb_ae" type="number" step="any"></div>
+      <div class="field"><label>Azimuth จาก A</label><input id="bb_aaz" type="number" step="any"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>จุด B: N</label><input id="bb_bn" type="number" step="any"></div>
+      <div class="field"><label>จุด B: E</label><input id="bb_be" type="number" step="any"></div>
+      <div class="field"><label>Azimuth จาก B</label><input id="bb_baz" type="number" step="any"></div>
+    </div>`;
+  } else if(intersectMode==='dd'){
+    el.innerHTML = `
+    <div class="field-row">
+      <div class="field"><label>จุด A: N</label><input id="dd_an" type="number" step="any"></div>
+      <div class="field"><label>จุด A: E</label><input id="dd_ae" type="number" step="any"></div>
+      <div class="field"><label>รัศมีจาก A (ม.)</label><input id="dd_ar" type="number" step="any"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>จุด B: N</label><input id="dd_bn" type="number" step="any"></div>
+      <div class="field"><label>จุด B: E</label><input id="dd_be" type="number" step="any"></div>
+      <div class="field"><label>รัศมีจาก B (ม.)</label><input id="dd_br" type="number" step="any"></div>
+    </div>`;
+  } else {
+    el.innerHTML = `
+    <div class="field-row">
+      <div class="field"><label>เส้น 1 จุดที่ 1: N</label><input id="ll_a1n" type="number" step="any"></div>
+      <div class="field"><label>E</label><input id="ll_a1e" type="number" step="any"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>เส้น 1 จุดที่ 2: N</label><input id="ll_a2n" type="number" step="any"></div>
+      <div class="field"><label>E</label><input id="ll_a2e" type="number" step="any"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>เส้น 2 จุดที่ 1: N</label><input id="ll_b1n" type="number" step="any"></div>
+      <div class="field"><label>E</label><input id="ll_b1e" type="number" step="any"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>เส้น 2 จุดที่ 2: N</label><input id="ll_b2n" type="number" step="any"></div>
+      <div class="field"><label>E</label><input id="ll_b2e" type="number" step="any"></div>
+    </div>`;
+  }
+}
+function bearingBearingIntersect(A, azA, B, azB){
+  const a1=azA*D2R, a2=azB*D2R;
+  const det = Math.sin(a2-a1);
+  if(Math.abs(det)<1e-10) return null;
+  const dE=B.e-A.e, dN=B.n-A.n;
+  const t1 = (-dE*Math.cos(a2) + Math.sin(a2)*dN)/det;
+  return { n:A.n+t1*Math.cos(a1), e:A.e+t1*Math.sin(a1) };
+}
+function distDistIntersect(A,rA,B,rB){
+  const dE=B.e-A.e, dN=B.n-A.n;
+  const d=Math.hypot(dE,dN);
+  if(d>rA+rB+1e-9 || d<Math.abs(rA-rB)-1e-9 || d<1e-9) return null;
+  const a=(rA*rA-rB*rB+d*d)/(2*d);
+  const h=Math.sqrt(Math.max(0,rA*rA-a*a));
+  const midN=A.n+a*dN/d, midE=A.e+a*dE/d;
+  return [ {n:midN+h*dE/d, e:midE-h*dN/d}, {n:midN-h*dE/d, e:midE+h*dN/d} ];
+}
+function lineLineIntersect(A1,A2,B1,B2){
+  const x1=A1.e,y1=A1.n,x2=A2.e,y2=A2.n,x3=B1.e,y3=B1.n,x4=B2.e,y4=B2.n;
+  const denom=(x1-x2)*(y3-y4)-(y1-y2)*(x3-x4);
+  if(Math.abs(denom)<1e-10) return null;
+  const px=((x1*y2-y1*x2)*(x3-x4)-(x1-x2)*(x3*y4-y3*x4))/denom;
+  const py=((x1*y2-y1*x2)*(y3-y4)-(y1-y2)*(x3*y4-y3*x4))/denom;
+  return { n:py, e:px };
+}
+function intCalc(){
+  const res = document.getElementById('int_result');
+  const v = id=>parseFloat(document.getElementById(id).value);
+  if(intersectMode==='bb'){
+    const A={n:v('bb_an'),e:v('bb_ae')}, B={n:v('bb_bn'),e:v('bb_be')};
+    const azA=angToDeg(document.getElementById('bb_aaz').value), azB=angToDeg(document.getElementById('bb_baz').value);
+    if([A.n,A.e,B.n,B.e,azA,azB].some(isNaN)){ res.innerHTML=`<div class="error-box">กรอกข้อมูลให้ครบทุกช่อง</div>`; return; }
+    const p = bearingBearingIntersect(A,azA,B,azB);
+    if(!p){ res.innerHTML=`<div class="error-box">เส้นทั้งสองขนานกัน ไม่มีจุดตัด</div>`; return; }
+    res.innerHTML = `<div class="result"><h3>จุดตัด</h3><div class="stat-grid">
+      <div class="stat"><div class="lbl">N</div><div class="val">${fmt(p.n,4)}</div></div>
+      <div class="stat"><div class="lbl">E</div><div class="val">${fmt(p.e,4)}</div></div>
+    </div></div>`;
+  } else if(intersectMode==='dd'){
+    const A={n:v('dd_an'),e:v('dd_ae')}, B={n:v('dd_bn'),e:v('dd_be')};
+    const rA=v('dd_ar'), rB=v('dd_br');
+    if([A.n,A.e,B.n,B.e,rA,rB].some(isNaN)){ res.innerHTML=`<div class="error-box">กรอกข้อมูลให้ครบทุกช่อง</div>`; return; }
+    const sols = distDistIntersect(A,rA,B,rB);
+    if(!sols){ res.innerHTML=`<div class="error-box">ไม่มีจุดตัด — รัศมีสั้นเกินไปหรือยาวเกินไปเมื่อเทียบกับระยะระหว่างจุด</div>`; return; }
+    res.innerHTML = `<div class="result"><h3>จุดตัด (2 คำตอบ)</h3>
+      <table><tr><th>คำตอบ</th><th>N</th><th>E</th></tr>
+      <tr><td>1</td><td>${fmt(sols[0].n,4)}</td><td>${fmt(sols[0].e,4)}</td></tr>
+      <tr><td>2</td><td>${fmt(sols[1].n,4)}</td><td>${fmt(sols[1].e,4)}</td></tr>
+      </table></div>`;
+  } else {
+    const A1={n:v('ll_a1n'),e:v('ll_a1e')}, A2={n:v('ll_a2n'),e:v('ll_a2e')};
+    const B1={n:v('ll_b1n'),e:v('ll_b1e')}, B2={n:v('ll_b2n'),e:v('ll_b2e')};
+    if([A1.n,A1.e,A2.n,A2.e,B1.n,B1.e,B2.n,B2.e].some(isNaN)){ res.innerHTML=`<div class="error-box">กรอกข้อมูลให้ครบทุกช่อง</div>`; return; }
+    const p = lineLineIntersect(A1,A2,B1,B2);
+    if(!p){ res.innerHTML=`<div class="error-box">เส้นทั้งสองขนานกัน ไม่มีจุดตัด</div>`; return; }
+    res.innerHTML = `<div class="result"><h3>จุดตัด</h3><div class="stat-grid">
+      <div class="stat"><div class="lbl">N</div><div class="val">${fmt(p.n,4)}</div></div>
+      <div class="stat"><div class="lbl">E</div><div class="val">${fmt(p.e,4)}</div></div>
+    </div></div>`;
+  }
+}
+
+/* =====================================================================
+   MODULE 5: TRANSFORM
+===================================================================== */
+let transMode = 'simple';
+let transPts = [ {n:'',e:''} ];
+function renderTransform(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>⇄ แปลงพิกัด (Transform)</h2>
+    <p class="desc">เลือกวิธีแปลงพิกัด: กำหนดค่าเอง (เลื่อน-หมุน-สเกล) หรือคำนวณจากจุดร่วม 2 จุด (Helmert)</p>
+    <div class="seg">
+      <button class="${transMode==='simple'?'on':''}" onclick="transSetMode('simple')">กำหนดค่าเอง</button>
+      <button class="${transMode==='helmert'?'on':''}" onclick="transSetMode('helmert')">จุดร่วม 2 จุด</button>
+    </div>
+    <div id="trans_params"></div>
+    <hr class="div">
+    <div class="desc" style="margin-bottom:6px;">รายการพิกัดที่ต้องการแปลง</div>
+    <div id="trans_pts"></div>
+    <div class="btn-row">
+      <button class="btn-secondary btn-small" onclick="transAddPt()">+ เพิ่มจุด</button>
+      <button class="btn-secondary btn-small" onclick="transFromLib()">เติมจากคลัง</button>
+      <button class="btn-secondary btn-small" onclick="triggerFileImport(transImportRows)">นำเข้า CSV</button>
+      <button class="btn-secondary btn-small" onclick="transExportPts()">ส่งออกพิกัด CSV</button>
+    </div>
+    <div class="btn-row"><button class="btn-primary" onclick="transCalc()">คำนวณ</button></div>
+    <div id="trans_result"></div>
+  </div>`;
+  transRenderParams();
+  transRenderPts();
+}
+function transFromLib(){ libInsertAllInto(transPts, transRenderPts); }
+function transImportRows(pts){ pts.forEach(p=>transPts.push({n:p.n,e:p.e})); transRenderPts(); }
+function transExportPts(){
+  const csv='N,E\n'+transPts.map(p=>`${p.n},${p.e}`).join('\n');
+  downloadCsv(csv,'transform_points.csv');
+}
+function transSetMode(m){ transMode=m; renderTransform(); }
+function transRenderParams(){
+  const el = document.getElementById('trans_params');
+  if(transMode==='simple'){
+    el.innerHTML = `
+    <div class="field-row">
+      <div class="field"><label>จุดหมุน (Pivot) N</label><input id="tr_pn" type="number" step="any" value="0"></div>
+      <div class="field"><label>จุดหมุน (Pivot) E</label><input id="tr_pe" type="number" step="any" value="0"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>มุมหมุน (°, ทวนเข็ม+)</label><input id="tr_rot" type="number" step="any" value="0"></div>
+      <div class="field"><label>สเกล</label><input id="tr_scale" type="number" step="any" value="1"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>เลื่อน ΔN</label><input id="tr_dn" type="number" step="any" value="0"></div>
+      <div class="field"><label>เลื่อน ΔE</label><input id="tr_de" type="number" step="any" value="0"></div>
+    </div>`;
+  } else {
+    el.innerHTML = `
+    <div class="desc">พิกัดต้นฉบับ (Source) คู่ที่ 1 &amp; 2</div>
+    <div class="field-row">
+      <div class="field"><label>Source1 N</label><input id="hm_s1n" type="number" step="any"></div>
+      <div class="field"><label>Source1 E</label><input id="hm_s1e" type="number" step="any"></div>
+      <div class="field"><label>Target1 N</label><input id="hm_t1n" type="number" step="any"></div>
+      <div class="field"><label>Target1 E</label><input id="hm_t1e" type="number" step="any"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Source2 N</label><input id="hm_s2n" type="number" step="any"></div>
+      <div class="field"><label>Source2 E</label><input id="hm_s2e" type="number" step="any"></div>
+      <div class="field"><label>Target2 N</label><input id="hm_t2n" type="number" step="any"></div>
+      <div class="field"><label>Target2 E</label><input id="hm_t2e" type="number" step="any"></div>
+    </div>`;
+  }
+}
+function transRenderPts(){
+  const el = document.getElementById('trans_pts');
+  el.innerHTML = transPts.map((p,i)=>`
+    <div class="rowline">
+      <div class="idx">${i+1}</div>
+      <div class="field"><label>N</label><input type="number" step="any" value="${esc(p.n)}" oninput="transPts[${i}].n=this.value"></div>
+      <div class="field"><label>E</label><input type="number" step="any" value="${esc(p.e)}" oninput="transPts[${i}].e=this.value"></div>
+      <button class="btn-danger" onclick="transRemovePt(${i})">ลบ</button>
+    </div>`).join('');
+}
+function transAddPt(){ transPts.push({n:'',e:''}); transRenderPts(); }
+function transRemovePt(i){ if(transPts.length<=1) return; transPts.splice(i,1); transRenderPts(); }
+function transformSimple(P, pivot, rotDeg, scale, dN, dE){
+  const rad=rotDeg*D2R;
+  const x=P.e-pivot.e, y=P.n-pivot.n;
+  const xr = x*Math.cos(rad)-y*Math.sin(rad);
+  const yr = x*Math.sin(rad)+y*Math.cos(rad);
+  return { n: pivot.n + yr*scale + dN, e: pivot.e + xr*scale + dE };
+}
+function helmert2pt(S1,S2,T1,T2,P){
+  const dxs=S2.e-S1.e, dys=S2.n-S1.n;
+  const dxt=T2.e-T1.e, dyt=T2.n-T1.n;
+  const scale=Math.hypot(dxt,dyt)/Math.hypot(dxs,dys);
+  const angle=Math.atan2(dxt,dyt)-Math.atan2(dxs,dys);
+  const rx=P.e-S1.e, ry=P.n-S1.n;
+  const rN = ry*Math.cos(angle)-rx*Math.sin(angle);
+  const rE = ry*Math.sin(angle)+rx*Math.cos(angle);
+  return { n:T1.n+scale*rN, e:T1.e+scale*rE };
+}
+function transCalc(){
+  const res = document.getElementById('trans_result');
+  const v = id=>parseFloat(document.getElementById(id).value);
+  const pts = transPts.map(p=>({n:parseFloat(p.n), e:parseFloat(p.e)}));
+  for(let i=0;i<pts.length;i++){ if(isNaN(pts[i].n)||isNaN(pts[i].e)){ res.innerHTML=`<div class="error-box">จุดที่ ${i+1}: กรอกพิกัดให้ครบ</div>`; return; } }
+  let results;
+  let paramNote = '';
+  if(transMode==='simple'){
+    const pivot={n:v('tr_pn'), e:v('tr_pe')};
+    const rot=v('tr_rot'), scale=v('tr_scale'), dN=v('tr_dn'), dE=v('tr_de');
+    if([pivot.n,pivot.e,rot,scale,dN,dE].some(isNaN)){ res.innerHTML=`<div class="error-box">กรอกพารามิเตอร์ให้ครบ</div>`; return; }
+    results = pts.map(p=>transformSimple(p,pivot,rot,scale,dN,dE));
+  } else {
+    const S1={n:v('hm_s1n'),e:v('hm_s1e')}, S2={n:v('hm_s2n'),e:v('hm_s2e')};
+    const T1={n:v('hm_t1n'),e:v('hm_t1e')}, T2={n:v('hm_t2n'),e:v('hm_t2e')};
+    if([S1.n,S1.e,S2.n,S2.e,T1.n,T1.e,T2.n,T2.e].some(isNaN)){ res.innerHTML=`<div class="error-box">กรอกพิกัดจุดร่วมให้ครบทั้ง 2 คู่</div>`; return; }
+    const dxs=S2.e-S1.e, dys=S2.n-S1.n, dxt=T2.e-T1.e, dyt=T2.n-T1.n;
+    const scale=Math.hypot(dxt,dyt)/Math.hypot(dxs,dys);
+    const angle=(Math.atan2(dxt,dyt)-Math.atan2(dxs,dys))*R2D;
+    paramNote = `<div class="stat-grid">
+      <div class="stat"><div class="lbl">สเกลที่คำนวณได้</div><div class="val">${fmt(scale,6)}</div></div>
+      <div class="stat"><div class="lbl">มุมหมุนที่คำนวณได้</div><div class="val">${fmt(norm360(angle),4)}°</div></div>
+    </div>`;
+    results = pts.map(p=>helmert2pt(S1,S2,T1,T2,p));
+  }
+  res.innerHTML = `<div class="result"><h3>พารามิเตอร์</h3>${paramNote || '<div class="desc">ใช้ค่าที่กำหนดเอง</div>'}</div>
+    <div class="result"><h3>พิกัดหลังแปลง</h3>
+    <table><tr><th>จุด</th><th>N ใหม่</th><th>E ใหม่</th></tr>
+    ${results.map((p,i)=>`<tr><td>${i+1}</td><td>${fmt(p.n,4)}</td><td>${fmt(p.e,4)}</td></tr>`).join('')}
+    </table></div>`;
+}
+
+/* =====================================================================
+   MODULE 6: RESECTION (TIENSTRA)
+===================================================================== */
+function renderResection(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>⌖ รีเซคชั่น 3 จุด (Tienstra)</h2>
+    <p class="desc">ใส่พิกัดจุดที่ทราบค่า 3 จุด และมุมราบที่วัดได้จากสถานีที่ไม่ทราบค่า ลำดับจุดเป็นอย่างไรก็ได้ ขอเพียงมุมทั้งสองวัด<strong>ตามเข็มนาฬิกา</strong> คือ จุด 1→2 และ จุด 2→3 · ใช้ได้ทั้งเมื่อสถานีอยู่ในและนอกสามเหลี่ยม</p>
+    <div class="field-row">
+      <div class="field"><label>จุดที่ 1: N</label><input id="rs_1n" type="number" step="any"></div>
+      <div class="field"><label>จุดที่ 1: E</label><input id="rs_1e" type="number" step="any"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>จุดที่ 2: N</label><input id="rs_2n" type="number" step="any"></div>
+      <div class="field"><label>จุดที่ 2: E</label><input id="rs_2e" type="number" step="any"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>จุดที่ 3: N</label><input id="rs_3n" type="number" step="any"></div>
+      <div class="field"><label>จุดที่ 3: E</label><input id="rs_3e" type="number" step="any"></div>
+    </div>
+    <hr class="div">
+    <p class="desc">มุมราบที่สถานีวัดได้ (ตามเข็มนาฬิกา): มุมจาก "จุดที่ 1 ถึง จุดที่ 2" และ "จุดที่ 2 ถึง จุดที่ 3"</p>
+    <div class="field-row">
+      <div class="field"><label>มุม 1→2 (α)</label><input id="rs_a" type="number" step="any"></div>
+      <div class="field"><label>มุม 2→3 (β)</label><input id="rs_b" type="number" step="any"></div>
+    </div>
+    <div class="btn-row"><button class="btn-primary" onclick="rsCalc()">คำนวณ</button></div>
+    <div id="rs_result"></div>
+    <div class="note">⚠️ วิธีนี้ใช้ไม่ได้ผลหากสถานีและจุดทั้งสามอยู่ใกล้วงกลมเดียวกัน (Danger Circle) — หากผลลัพธ์ผิดปกติ ให้ลองเปลี่ยนลำดับจุดอ้างอิงหรือตรวจสอบมุมที่วัดอีกครั้ง</div>
+  </div>`;
+}
+/* Resection by the two-circle (Collins/Snellius) construction.
+
+   The station lies on the arc where chord P1P2 subtends the observed angle p,
+   and also on the arc where P2P3 subtends q. Both circles pass through P2, so
+   the station is their *other* intersection.
+
+   This is valid for any ordering of the three known points and for a station
+   inside or outside the triangle. The classical Tienstra cotangent formula is
+   only correct when the triangle P1P2P3 winds clockwise; with a station outside
+   a counter-clockwise triangle it silently returns a badly wrong position. */
+function arcCircle(A, B, th){
+  const vx = B.e-A.e, vy = B.n-A.n;
+  const L = Math.hypot(vx, vy);
+  const s = Math.sin(th*D2R);
+  if(L < 1e-12 || Math.abs(s) < 1e-12) return null;
+  const R = Math.abs(L/(2*s));
+  const d = L/(2*Math.tan(th*D2R));
+  // unit normal to AB, rotated -90 degrees
+  return { e:(A.e+B.e)/2 + (vy/L)*d, n:(A.n+B.n)/2 + (-vx/L)*d, R };
+}
+function circleCircleOther(C1, C2, shared){
+  const dx = C2.e-C1.e, dy = C2.n-C1.n;
+  const d = Math.hypot(dx, dy);
+  if(d < 1e-9) return null;                 // concentric: danger circle
+  const a = (C1.R*C1.R - C2.R*C2.R + d*d)/(2*d);
+  const h = Math.sqrt(Math.max(0, C1.R*C1.R - a*a));
+  const mx = C1.e + a*dx/d, my = C1.n + a*dy/d;
+  const s1 = { e:mx + h*dy/d, n:my - h*dx/d };
+  const s2 = { e:mx - h*dy/d, n:my + h*dx/d };
+  // keep whichever is not the shared point P2
+  return Math.hypot(s1.e-shared.e, s1.n-shared.n) > Math.hypot(s2.e-shared.e, s2.n-shared.n) ? s1 : s2;
+}
+function tienstraResection(P1, P2, P3, p, q){
+  const C1 = arcCircle(P1, P2, p);
+  const C2 = arcCircle(P2, P3, q);
+  if(!C1 || !C2) return { n:NaN, e:NaN, dangerRisk:true };
+  const scale = Math.max(C1.R, C2.R);
+  const sep = Math.hypot(C2.e-C1.e, C2.n-C1.n);
+  // Both circles pass through P2. If they coincide, every point on that circle
+  // fits the observations: the station is on the danger circle.
+  const danger = sep < 1e-6*scale;
+  const S = circleCircleOther(C1, C2, P2);
+  if(!S) return { n:NaN, e:NaN, dangerRisk:true };
+  return { n:S.n, e:S.e, dangerRisk:danger };
+}
+function rsCalc(){
+  const res = document.getElementById('rs_result');
+  const v = id=>parseFloat(document.getElementById(id).value);
+  const P1={n:v('rs_1n'),e:v('rs_1e')}, P2={n:v('rs_2n'),e:v('rs_2e')}, P3={n:v('rs_3n'),e:v('rs_3e')};
+  const alpha=angToDeg(document.getElementById('rs_a').value), beta=angToDeg(document.getElementById('rs_b').value);
+  if([P1.n,P1.e,P2.n,P2.e,P3.n,P3.e,alpha,beta].some(isNaN)){ res.innerHTML=`<div class="error-box">กรอกพิกัดและมุมให้ครบทุกช่อง (มุมต้องอยู่ในรูปแบบที่ถูกต้อง)</div>`; return; }
+  if(alpha<=0 || alpha>=360 || beta<=0 || beta>=360){ res.innerHTML=`<div class="error-box">มุม α และ β ต้องอยู่ระหว่าง 0° ถึง 360°</div>`; return; }
+  if(dist2(P1,P2)<1e-9 || dist2(P2,P3)<1e-9 || dist2(P1,P3)<1e-9){ res.innerHTML=`<div class="error-box">จุดอ้างอิงซ้ำกัน — ต้องเป็นสามจุดที่ต่างกัน</div>`; return; }
+
+  const result = tienstraResection(P1,P2,P3,alpha,beta);
+  if(result.dangerRisk || !isFinite(result.n) || !isFinite(result.e)){
+    res.innerHTML = `<div class="error-box">คำนวณไม่ได้ — สถานีอยู่บนหรือใกล้วงกลมอันตราย (Danger Circle) ที่ลากผ่านจุดอ้างอิงทั้งสาม ในตำแหน่งนี้มุมที่วัดได้เท่ากันทุกจุดบนวงกลม จึงหาพิกัดไม่ได้ กรุณาเลือกจุดอ้างอิงใหม่</div>`;
+    return;
+  }
+  // Back-check: recompute the two angles from the solved station
+  const S = {n:result.n, e:result.e};
+  const a2 = norm360(azimuth(S,P2)-azimuth(S,P1));
+  const b2 = norm360(azimuth(S,P3)-azimuth(S,P2));
+  const dA = Math.abs(norm360(a2-alpha+180)-180)*3600;   // arcsec, wrapped
+  const dB = Math.abs(norm360(b2-beta +180)-180)*3600;
+  const resid = Math.max(dA,dB);
+  const good = resid < 1;
+
+  res.innerHTML = `<div class="result"><h3>พิกัดสถานี (Resection)</h3>
+    <div class="stat-grid">
+      <div class="stat good"><div class="lbl">N</div><div class="val">${fmt(result.n,4)}</div></div>
+      <div class="stat good"><div class="lbl">E</div><div class="val">${fmt(result.e,4)}</div></div>
+      <div class="stat ${good?'good':'warn'}"><div class="lbl">ตรวจย้อนกลับ (มุมคลาดเคลื่อน)</div><div class="val">${resid<0.01?'< 0.01':fmt(resid,2)}″</div></div>
+    </div>
+    <div class="note">ตรวจย้อนกลับ = คำนวณมุม α, β กลับจากพิกัดที่ได้ แล้วเทียบกับมุมที่กรอก ถ้าค่าใกล้ 0″ แปลว่าคำตอบสอดคล้องกับข้อมูลที่วัดมา</div>
+  </div>`;
+}
+
+/* =====================================================================
+   MODULE 7: RADIATION (AZIMUTH-DISTANCE / TOTAL STATION POLAR)
+===================================================================== */
+let radMode = 'az';
+let radShots = [ {angle:'', dist:''} ];
+function renderRadiation(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>➤ อะซิมุท-ระยะ (Radiation)</h2>
+    <p class="desc">คำนวณพิกัดจุดจากสถานี ด้วยอะซิมุทและระยะ (แบบยิงรัศมี Total Station) เลือกได้ว่าจะป้อนอะซิมุทตรง หรือมุมจากแนวหลัง (Backsight)</p>
+    <div class="field-row">
+      <div class="field"><label>สถานี N</label><input id="rad_sn" type="number" step="any"></div>
+      <div class="field"><label>สถานี E</label><input id="rad_se" type="number" step="any"></div>
+    </div>
+    <div class="seg">
+      <button class="${radMode==='az'?'on':''}" onclick="radSetMode('az')">ป้อน Azimuth ตรง</button>
+      <button class="${radMode==='bs'?'on':''}" onclick="radSetMode('bs')">มุมจาก Backsight</button>
+    </div>
+    <div id="rad_bs_row"></div>
+    <hr class="div">
+    <div id="rad_shots"></div>
+    <div class="btn-row">
+      <button class="btn-secondary btn-small" onclick="radAddShot()">+ เพิ่มจุดยิง</button>
+      <button class="btn-primary" onclick="radCalc()">คำนวณ</button>
+    </div>
+    <div id="rad_result"></div>
+  </div>`;
+  radRenderBsRow();
+  radRenderShots();
+}
+function radSetMode(m){ radMode=m; radRenderBsRow(); radRenderShots(); }
+function radRenderBsRow(){
+  const el = document.getElementById('rad_bs_row');
+  if(radMode==='bs'){
+    el.innerHTML = `<div class="field-row"><div class="field"><label>Azimuth แนวหลัง (Backsight)</label><input id="rad_bsaz" type="number" step="any"></div></div>`;
+  } else { el.innerHTML=''; }
+}
+function radRenderShots(){
+  const el = document.getElementById('rad_shots');
+  const angLabel = radMode==='bs' ? 'มุมราบจาก Backsight (ตามเข็ม)' : 'Azimuth';
+  el.innerHTML = radShots.map((s,i)=>`
+    <div class="rowline">
+      <div class="idx">${i+1}</div>
+      <div class="field"><label>${angLabel}</label><input type="number" step="any" value="${esc(s.angle)}" oninput="radShots[${i}].angle=this.value"></div>
+      <div class="field"><label>ระยะ (ม.)</label><input type="number" step="any" value="${esc(s.dist)}" oninput="radShots[${i}].dist=this.value"></div>
+      <button class="btn-danger" onclick="radRemoveShot(${i})">ลบ</button>
+    </div>`).join('');
+}
+function radAddShot(){ radShots.push({angle:'',dist:''}); radRenderShots(); }
+function radRemoveShot(i){ if(radShots.length<=1) return; radShots.splice(i,1); radRenderShots(); }
+function radiationPoint(station, az, dist){
+  const rad = az*D2R;
+  return { n: station.n + dist*Math.cos(rad), e: station.e + dist*Math.sin(rad) };
+}
+function radCalc(){
+  const res = document.getElementById('rad_result');
+  const station = {n:parseFloat(document.getElementById('rad_sn').value), e:parseFloat(document.getElementById('rad_se').value)};
+  if(isNaN(station.n)||isNaN(station.e)){ res.innerHTML=`<div class="error-box">กรอกพิกัดสถานีให้ครบ</div>`; return; }
+  let bsAz = 0;
+  if(radMode==='bs'){
+    bsAz = angToDeg(document.getElementById('rad_bsaz').value);
+    if(isNaN(bsAz)){ res.innerHTML=`<div class="error-box">กรอก Azimuth แนวหลัง (Backsight) ให้ครบ</div>`; return; }
+  }
+  let rows='';
+  const exportPts = [];
+  for(let i=0;i<radShots.length;i++){
+    const angRaw = angToDeg(radShots[i].angle);
+    const dist = parseFloat(radShots[i].dist);
+    if(isNaN(angRaw) || isNaN(dist)){ res.innerHTML=`<div class="error-box">จุดยิงที่ ${i+1}: กรอกมุมและระยะให้ครบ</div>`; return; }
+    const az = radMode==='bs' ? norm360(bsAz+angRaw) : norm360(angRaw);
+    const p = radiationPoint(station, az, dist);
+    rows += `<tr><td>${i+1}</td><td>${fmt(az,4)}°</td><td>${fmt(dist,3)}</td><td>${fmt(p.n,4)}</td><td>${fmt(p.e,4)}</td></tr>`;
+    exportPts.push({i:i+1, az, dist, n:p.n, e:p.e});
+  }
+  res.innerHTML = `<div class="result"><h3>พิกัดจุดที่คำนวณได้</h3>
+    <table><tr><th>#</th><th>Azimuth</th><th>ระยะ</th><th>N</th><th>E</th></tr>${rows}</table>
+    <div class="btn-row"><button class="btn-secondary btn-small" onclick='radExport(${JSON.stringify(exportPts)})'>ส่งออก CSV</button></div>
+    </div>`;
+}
+function radExport(pts){
+  const csv = 'Point,Azimuth,Distance,N,E\n'+pts.map(p=>`${p.i},${p.az.toFixed(4)},${p.dist.toFixed(3)},${p.n.toFixed(4)},${p.e.toFixed(4)}`).join('\n');
+  downloadCsv(csv, 'radiation_points.csv');
+}
+
+/* =====================================================================
+   MODULE 8: OFFSET CHECK — verify a surveyed point's station/offset
+   against a reference line (and optionally against design values)
+===================================================================== */
+let ockPts = [ {n:'', e:'', dsta:'', doff:''} ];
+function renderP2L(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>⊥ เช็คระยะออฟเซ็ตจากจุดพิกัด</h2>
+    <p class="desc">ตรวจสอบจุดที่สำรวจได้ (เช่น จุดปักหลัก หรือจุดที่ต้องการเช็ค) เทียบกับแนวเส้นอ้างอิง — ระบบจะคำนวณสเตชั่น ระยะออฟเซ็ต และด้าน (ซ้าย/ขวา) ให้ และเทียบกับค่าออกแบบได้หากระบุ</p>
+    <div class="desc" style="margin-bottom:4px;">แนวเส้นอ้างอิง (Centerline) — 2 จุด ตามทิศทางที่เดินสำรวจ</div>
+    <div class="field-row">
+      <div class="field"><label>L1: N</label><input id="ock_l1n" type="number" step="any"></div>
+      <div class="field"><label>L1: E</label><input id="ock_l1e" type="number" step="any"></div>
+      <div class="field"><label>L2: N</label><input id="ock_l2n" type="number" step="any"></div>
+      <div class="field"><label>L2: E</label><input id="ock_l2e" type="number" step="any"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>ค่าเผื่อ (Tolerance) ม.</label><input id="ock_tol" type="number" step="any" value="0.02"></div>
+    </div>
+    <hr class="div">
+    <div class="desc" style="margin-bottom:4px;">จุดที่ต้องการเช็ค (ใส่ค่าออกแบบเพื่อเทียบผลได้ — ถ้าไม่มีให้เว้นว่าง)</div>
+    <div id="ock_pts"></div>
+    <div class="btn-row">
+      <button class="btn-secondary btn-small" onclick="ockAddPt()">+ เพิ่มจุด</button>
+      <button class="btn-secondary btn-small" onclick="ockFromLib()">เติมจากคลัง</button>
+      <button class="btn-secondary btn-small" onclick="triggerFileImport(ockImportRows)">นำเข้า CSV</button>
+      <button class="btn-secondary btn-small" onclick="ockExportPts()">ส่งออกพิกัด CSV</button>
+    </div>
+    <div class="btn-row"><button class="btn-primary" onclick="ockCalc()">คำนวณ</button></div>
+    <div id="ock_result"></div>
+  </div>`;
+  ockRenderPts();
+}
+function ockFromLib(){ libInsertAllInto(ockPts, ockRenderPts); }
+function ockImportRows(pts){ pts.forEach(p=>ockPts.push({n:p.n,e:p.e,dsta:'',doff:''})); ockRenderPts(); }
+function ockExportPts(){
+  const csv='N,E,DesignStation,DesignOffset\n'+ockPts.map(p=>`${p.n},${p.e},${p.dsta||''},${p.doff||''}`).join('\n');
+  downloadCsv(csv,'offset_check_points.csv');
+}
+function ockRenderPts(){
+  const el = document.getElementById('ock_pts');
+  el.innerHTML = ockPts.map((p,i)=>`
+    <div class="rowline" style="flex-wrap:wrap;">
+      <div class="idx">${i+1}</div>
+      <div class="field"><label>N</label><input type="number" step="any" value="${esc(p.n)}" oninput="ockPts[${i}].n=this.value"></div>
+      <div class="field"><label>E</label><input type="number" step="any" value="${esc(p.e)}" oninput="ockPts[${i}].e=this.value"></div>
+      <div class="field"><label>สเตชั่นออกแบบ (ถ้ามี)</label><input type="number" step="any" value="${esc(p.dsta)}" oninput="ockPts[${i}].dsta=this.value"></div>
+      <div class="field"><label>ออฟเซ็ตออกแบบ (ถ้ามี, +ขวา)</label><input type="number" step="any" value="${esc(p.doff)}" oninput="ockPts[${i}].doff=this.value"></div>
+      <button class="btn-danger" onclick="ockRemovePt(${i})">ลบ</button>
+    </div>`).join('');
+}
+function ockAddPt(){ ockPts.push({n:'',e:'',dsta:'',doff:''}); ockRenderPts(); }
+function ockRemovePt(i){ if(ockPts.length<=1) return; ockPts.splice(i,1); ockRenderPts(); }
+function checkOffset(L1,L2,P){
+  const az = azimuth(L1,L2);
+  const rad = az*D2R;
+  const dE=P.e-L1.e, dN=P.n-L1.n;
+  const station = dE*Math.sin(rad)+dN*Math.cos(rad);
+  const signedOffset = dE*Math.cos(rad)-dN*Math.sin(rad);
+  const foot = { n:L1.n+station*Math.cos(rad), e:L1.e+station*Math.sin(rad) };
+  const side = signedOffset>1e-9 ? 'ขวา' : (signedOffset<-1e-9 ? 'ซ้าย' : 'บนแนวเส้น');
+  return { az, station, signedOffset, foot, side };
+}
+function ockCalc(){
+  const res = document.getElementById('ock_result');
+  const v = id=>parseFloat(document.getElementById(id).value);
+  const L1={n:v('ock_l1n'),e:v('ock_l1e')}, L2={n:v('ock_l2n'),e:v('ock_l2e')};
+  const tol = parseFloat(document.getElementById('ock_tol').value);
+  if([L1.n,L1.e,L2.n,L2.e].some(isNaN)){ res.innerHTML=`<div class="error-box">กรอกพิกัดแนวเส้นอ้างอิงให้ครบ</div>`; return; }
+  if(L1.n===L2.n && L1.e===L2.e){ res.innerHTML=`<div class="error-box">L1 และ L2 เป็นจุดเดียวกัน ไม่สามารถกำหนดแนวเส้นได้</div>`; return; }
+  const tolerance = isNaN(tol) ? 0.02 : tol;
+  let rows='';
+  for(let i=0;i<ockPts.length;i++){
+    const p = ockPts[i];
+    const P = {n:parseFloat(p.n), e:parseFloat(p.e)};
+    if(isNaN(P.n)||isNaN(P.e)){ res.innerHTML=`<div class="error-box">จุดที่ ${i+1}: กรอกพิกัด N, E ให้ครบ</div>`; return; }
+    const r = checkOffset(L1,L2,P);
+    const hasDesign = p.dsta!=='' && p.doff!=='' && !isNaN(parseFloat(p.dsta)) && !isNaN(parseFloat(p.doff));
+    let diffCell = '<td colspan="2" style="color:var(--ink-soft);">- ไม่ได้ระบุค่าออกแบบ -</td>';
+    if(hasDesign){
+      const dSta = parseFloat(p.dsta), dOff = parseFloat(p.doff);
+      const errSta = r.station - dSta, errOff = r.signedOffset - dOff;
+      const overTol = Math.abs(errSta)>tolerance || Math.abs(errOff)>tolerance;
+      const cls = overTol ? 'color:var(--rust);font-weight:700;' : 'color:var(--pine);font-weight:700;';
+      diffCell = `<td style="${cls}">${errSta>=0?'+':''}${fmt(errSta,4)}</td><td style="${cls}">${errOff>=0?'+':''}${fmt(errOff,4)} ${overTol?'⚠️':'✓'}</td>`;
+    }
+    rows += `<tr><td>${i+1}</td><td>${fmt(r.station,4)}</td><td>${fmt(r.signedOffset,4)}</td><td>${r.side}</td><td>${fmt(r.foot.n,3)}, ${fmt(r.foot.e,3)}</td>${diffCell}</tr>`;
+  }
+  res.innerHTML = `<div class="result"><h3>ผลการตรวจสอบ (ค่าเผื่อ ±${fmt(tolerance,3)} ม.)</h3>
+    <table><tr><th>#</th><th>สเตชั่นจริง</th><th>ออฟเซ็ตจริง</th><th>ด้าน</th><th>เท้าตั้งฉาก N,E</th><th>Δสเตชั่น</th><th>Δออฟเซ็ต</th></tr>${rows}</table>
+    <div class="note">ออฟเซ็ต + = ขวาของทิศทางเดินเส้น (L1→L2), − = ซ้าย · สเตชั่นวัดจาก L1 ตามแนวเส้น</div>
+  </div>`;
+}
+
+/* =====================================================================
+   MODULE 9: OFFSET
+===================================================================== */
+function renderOffset(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>↧ ออฟเซ็ตพิกัด (Offset)</h2>
+    <p class="desc">หาพิกัดจุดที่ห่างจากแนวเส้น (Centerline) ตามระยะสเตชั่น (Chainage) และระยะออฟเซ็ตตั้งฉาก (บวก = ขวาของทิศทางเดินเส้น)</p>
+    <div class="desc" style="margin-bottom:4px;">แนวเส้นอ้างอิง (2 จุด ตามทิศทางที่เดินสำรวจ)</div>
+    <div class="field-row">
+      <div class="field"><label>L1: N</label><input id="off_l1n" type="number" step="any"></div>
+      <div class="field"><label>L1: E</label><input id="off_l1e" type="number" step="any"></div>
+      <div class="field"><label>L2: N</label><input id="off_l2n" type="number" step="any"></div>
+      <div class="field"><label>L2: E</label><input id="off_l2e" type="number" step="any"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>สเตชั่น (ม. จาก L1)</label><input id="off_sta" type="number" step="any"></div>
+      <div class="field"><label>ออฟเซ็ต (+ขวา / -ซ้าย)</label><input id="off_dist" type="number" step="any"></div>
+    </div>
+    <div class="btn-row"><button class="btn-primary" onclick="offCalc()">คำนวณ</button></div>
+    <div id="off_result"></div>
+  </div>`;
+}
+function offsetPoint(L1,L2, chainage, offsetDist){
+  const az = azimuth(L1,L2);
+  const onLine = radiationPoint(L1, az, chainage);
+  const perpAz = az+90;
+  const pt = radiationPoint(onLine, perpAz, offsetDist);
+  return { ...pt, az, onLine };
+}
+function offCalc(){
+  const res = document.getElementById('off_result');
+  const v = id=>parseFloat(document.getElementById(id).value);
+  const L1={n:v('off_l1n'),e:v('off_l1e')}, L2={n:v('off_l2n'),e:v('off_l2e')};
+  const sta=v('off_sta'), off=v('off_dist');
+  if([L1.n,L1.e,L2.n,L2.e,sta,off].some(isNaN)){ res.innerHTML=`<div class="error-box">กรอกข้อมูลให้ครบทุกช่อง</div>`; return; }
+  if(L1.n===L2.n && L1.e===L2.e){ res.innerHTML=`<div class="error-box">L1 และ L2 เป็นจุดเดียวกัน ไม่สามารถกำหนดทิศทางเส้นได้</div>`; return; }
+  const r = offsetPoint(L1,L2,sta,off);
+  res.innerHTML = `<div class="result"><h3>ผลลัพธ์</h3>
+    <div class="stat-grid">
+      <div class="stat"><div class="lbl">Azimuth แนวเส้น</div><div class="val">${fmt(r.az,4)}°</div></div>
+      <div class="stat"><div class="lbl">จุดบนแนวเส้น N / E</div><div class="val">${fmt(r.onLine.n,3)} / ${fmt(r.onLine.e,3)}</div></div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat good"><div class="lbl">พิกัดจุดออฟเซ็ต N</div><div class="val">${fmt(r.n,4)}</div></div>
+      <div class="stat good"><div class="lbl">พิกัดจุดออฟเซ็ต E</div><div class="val">${fmt(r.e,4)}</div></div>
+    </div>
+  </div>`;
+}
+
+/* =====================================================================
+   MODULE 11: STAKEOUT SHEET — calculate azimuth & distance from station
+   to points for field stakeout (ใบสรุปการปักหลัก)
+===================================================================== */
+let stoPts = [ {name:'', n:'', e:''} ];
+function renderStakeout(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>📌 ใบสรุปสเตคเอาท์ (Stakeout Sheet)</h2>
+    <p class="desc">คำนวณ Azimuth และระยะจากสถานีออกแบบไปยังจุดต่างๆ สำหรับปักหลักในสนาม</p>
+    <div class="field-row">
+      <div class="field"><label>สถานีอ้างอิง N</label><input id="sto_sn" type="number" step="any"></div>
+      <div class="field"><label>สถานีอ้างอิง E</label><input id="sto_se" type="number" step="any"></div>
+      <div class="field"><label>Azimuth แนวหลัก (ทำให้เส้นอ้างอิง)</label><input id="sto_refaz" type="number" step="any" placeholder="เลือก ปล่อยว่างก็ได้"></div>
+    </div>
+    <hr class="div">
+    <div class="desc" style="margin-bottom:6px;">จุดที่ต้องปัก</div>
+    <div id="sto_pts"></div>
+    <div class="btn-row">
+      <button class="btn-secondary btn-small" onclick="stoAddPt()">+ เพิ่มจุด</button>
+      <button class="btn-secondary btn-small" onclick="stoFromLib()">เติมจากคลัง</button>
+      <button class="btn-secondary btn-small" onclick="triggerFileImport(stoImportRows)">นำเข้า CSV</button>
+      <button class="btn-primary" onclick="stoCalc()">คำนวณ</button>
+    </div>
+    <div id="sto_result"></div>
+  </div>`;
+  stoRenderPts();
+}
+function stoRenderPts(){
+  const el = document.getElementById('sto_pts');
+  el.innerHTML = stoPts.map((p,i)=>`
+    <div class="rowline">
+      <div class="idx">${i+1}</div>
+      <div class="field"><label>ชื่อจุด</label><input value="${esc(p.name)}" oninput="stoPts[${i}].name=this.value"></div>
+      <div class="field"><label>N</label><input type="number" step="any" value="${esc(p.n)}" oninput="stoPts[${i}].n=this.value"></div>
+      <div class="field"><label>E</label><input type="number" step="any" value="${esc(p.e)}" oninput="stoPts[${i}].e=this.value"></div>
+      <button class="btn-danger" onclick="stoRemovePt(${i})">ลบ</button>
+    </div>`).join('');
+}
+function stoAddPt(){ stoPts.push({name:'',n:'',e:''}); stoRenderPts(); }
+function stoRemovePt(i){ if(stoPts.length<=1) return; stoPts.splice(i,1); stoRenderPts(); }
+function stoFromLib(){ libInsertAllInto(stoPts, stoRenderPts); }
+function stoImportRows(pts){ pts.forEach(p=>stoPts.push({name:p.name||'',n:p.n,e:p.e})); stoRenderPts(); }
+function stoCalc(){
+  const res = document.getElementById('sto_result');
+  const station = {n:parseFloat(document.getElementById('sto_sn').value), e:parseFloat(document.getElementById('sto_se').value)};
+  if(isNaN(station.n)||isNaN(station.e)){ res.innerHTML=`<div class="error-box">กรอกพิกัดสถานีให้ครบ</div>`; return; }
+  const refAzStr = document.getElementById('sto_refaz').value;
+  let refAz = refAzStr ? angToDeg(refAzStr) : null;
+  let rows='';
+  for(let i=0;i<stoPts.length;i++){
+    const p = stoPts[i];
+    const pt = {n:parseFloat(p.n), e:parseFloat(p.e)};
+    if(isNaN(pt.n)||isNaN(pt.e)){ res.innerHTML=`<div class="error-box">จุดที่ ${i+1}: กรอกพิกัด N, E ให้ครบ</div>`; return; }
+    const dist = dist2(station, pt);
+    const az = azimuth(station, pt);
+    const offsetAz = refAz!==null ? norm360(az-refAz) : null;
+    rows += `<tr>
+      <td>${p.name||'-'}</td>
+      <td>${fmt(az,4)}°</td>
+      <td>${dmsPretty(az)}</td>
+      <td>${fmt(dist,2)}</td>
+      ${offsetAz!==null ? `<td>${fmt(offsetAz,4)}° (${offsetAz>180?'-':'+'}${fmt(Math.min(offsetAz,360-offsetAz),1)}°)</td>` : '<td>—</td>'}
+    </tr>`;
+  }
+  res.innerHTML = `<div class="result"><h3>ผลการคำนวณสเตคเอาท์</h3>
+    <table><tr><th>ชื่อจุด</th><th>Azimuth (°)</th><th>มุมราบ</th><th>ระยะ (ม.)</th><th>${refAz!==null?'มุมจากแนวหลัก':'—'}</th></tr>${rows}</table>
+    <div class="note">ระยะวัดจากสถานี (${fmt(station.n,2)}, ${fmt(station.e,2)}) — คัดลอกให้งานสนาม ใช้ Total Station ยิงไปยังแต่ละจุด</div>
+  </div>`;
+}
+
+/* =====================================================================
+   MODULE 12: LAND SUBDIVISION — cut a target area off a parcel
+===================================================================== */
+let sdPts = [ {n:'',e:''}, {n:'',e:''}, {n:'',e:''} ];
+let sdMode = 'parallel'; // 'parallel' | 'pivot'
+function renderSubdiv(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>✂️ แบ่งพื้นที่ตามเนื้อที่ที่ต้องการ</h2>
+    <p class="desc">ใส่ขอบเขตแปลงตามลำดับรอบรูป แล้วระบุเนื้อที่ที่ต้องการแบ่งออกมา ระบบจะหาเส้นแบ่งที่ให้เนื้อที่ตรงตามเป้าหมาย</p>
+    <div class="seg">
+      <button class="${sdMode==='parallel'?'on':''}" onclick="sdSetMode('parallel')">เส้นขนานกับทิศที่กำหนด</button>
+      <button class="${sdMode==='pivot'?'on':''}" onclick="sdSetMode('pivot')">เส้นผ่านจุดที่กำหนด</button>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>เนื้อที่ที่ต้องการ</label><input id="sd_target" type="number" step="any" placeholder="เช่น 1600"></div>
+      <div class="field"><label>หน่วย</label>
+        <select id="sd_unit">
+          <option value="sqm">ตร.ม.</option>
+          <option value="rai">ไร่</option>
+          <option value="ngan">งาน</option>
+          <option value="wa">ตร.วา</option>
+        </select>
+      </div>
+      ${sdMode==='parallel'
+        ? `<div class="field"><label>Azimuth เส้นแบ่ง (°)</label><input id="sd_az" type="number" step="any" placeholder="เช่น 90"></div>`
+        : `<div class="field"><label>จุดหมุน N</label><input id="sd_pn" type="number" step="any"></div>
+           <div class="field"><label>จุดหมุน E</label><input id="sd_pe" type="number" step="any"></div>`}
+    </div>
+    <hr class="div">
+    <div class="desc" style="margin-bottom:6px;">ขอบเขตแปลง (เรียงรอบรูป)</div>
+    <div id="sd_pts"></div>
+    <div class="btn-row">
+      <button class="btn-secondary btn-small" onclick="sdAddPt()">+ เพิ่มจุด</button>
+      <button class="btn-secondary btn-small" onclick="sdFromLib()">เติมจากคลัง</button>
+      <button class="btn-secondary btn-small" onclick="triggerFileImport(sdImportRows)">นำเข้า CSV</button>
+      <button class="btn-primary" onclick="sdCalc()">คำนวณเส้นแบ่ง</button>
+    </div>
+    <div id="sd_result"></div>
+  </div>`;
+  sdRenderPts();
+}
+function sdSetMode(m){ sdMode=m; renderSubdiv(); }
+function sdRenderPts(){
+  const el = document.getElementById('sd_pts');
+  el.innerHTML = sdPts.map((p,i)=>`
+    <div class="rowline">
+      <div class="idx">${i+1}</div>
+      <div class="field"><label>N</label><input type="number" step="any" value="${esc(p.n)}" oninput="sdPts[${i}].n=this.value"></div>
+      <div class="field"><label>E</label><input type="number" step="any" value="${esc(p.e)}" oninput="sdPts[${i}].e=this.value"></div>
+      <button class="btn-danger" onclick="sdRemovePt(${i})">ลบ</button>
+    </div>`).join('');
+}
+function sdAddPt(){ sdPts.push({n:'',e:''}); sdRenderPts(); }
+function sdRemovePt(i){ if(sdPts.length<=3) return; sdPts.splice(i,1); sdRenderPts(); }
+function sdFromLib(){ libInsertAllInto(sdPts, sdRenderPts); }
+function sdImportRows(pts){ pts.forEach(p=>sdPts.push({n:p.n,e:p.e})); sdRenderPts(); }
+function sdTargetSqm(){
+  const v = parseFloat(document.getElementById('sd_target').value);
+  if(isNaN(v)) return NaN;
+  switch(document.getElementById('sd_unit').value){
+    case 'rai':  return v*1600;
+    case 'ngan': return v*400;
+    case 'wa':   return v*4;
+    default:     return v;
+  }
+}
+function sdCalc(){
+  const res = document.getElementById('sd_result');
+  const poly = sdPts.map(p=>({n:parseFloat(p.n), e:parseFloat(p.e)}));
+  for(let i=0;i<poly.length;i++){
+    if(isNaN(poly[i].n)||isNaN(poly[i].e)){ res.innerHTML=`<div class="error-box">จุดที่ ${i+1}: กรอกพิกัด N, E ให้ครบ</div>`; return; }
+  }
+  if(poly.length<3){ res.innerHTML=`<div class="error-box">ต้องมีอย่างน้อย 3 จุด</div>`; return; }
+  const target = sdTargetSqm();
+  if(isNaN(target)){ res.innerHTML=`<div class="error-box">กรอกเนื้อที่ที่ต้องการ</div>`; return; }
+
+  let r;
+  if(sdMode==='parallel'){
+    const az = angToDeg(document.getElementById('sd_az').value);
+    if(isNaN(az)){ res.innerHTML=`<div class="error-box">กรอก Azimuth ของเส้นแบ่ง</div>`; return; }
+    r = cutParallel(poly, az, target);
+  } else {
+    const pn = parseFloat(document.getElementById('sd_pn').value);
+    const pe = parseFloat(document.getElementById('sd_pe').value);
+    if(isNaN(pn)||isNaN(pe)){ res.innerHTML=`<div class="error-box">กรอกพิกัดจุดหมุนให้ครบ</div>`; return; }
+    r = cutThroughPoint(poly, {n:pn,e:pe}, target);
+  }
+  if(r.error){ res.innerHTML=`<div class="error-box">${r.error}</div>`; return; }
+
+  const total = shoelaceArea(poly);
+  const restArea = shoelaceArea(r.rest);
+  const diff = r.achieved - target;
+
+  // The cut line is the edge shared by both pieces: find vertices of `piece`
+  // that lie on the boundary between piece and rest.
+  const cutPts = r.piece.filter(p => r.rest.some(q => Math.hypot(p.n-q.n, p.e-q.e) < 1e-6));
+
+  res.innerHTML = `
+    <div class="result">
+      <h3>ผลการแบ่ง</h3>
+      <div class="stat-grid">
+        <div class="stat"><div class="lbl">พื้นที่ทั้งแปลง</div><div class="val">${fmt(total,2)} ตร.ม.</div></div>
+        <div class="stat good"><div class="lbl">แปลงที่แบ่งได้</div><div class="val">${fmt(r.achieved,2)} ตร.ม.</div></div>
+        <div class="stat"><div class="lbl">แปลงที่เหลือ</div><div class="val">${fmt(restArea,2)} ตร.ม.</div></div>
+        <div class="stat ${Math.abs(diff)<0.01?'good':'warn'}"><div class="lbl">คลาดเคลื่อนจากเป้า</div><div class="val">${fmt(diff,4)} ตร.ม.</div></div>
+      </div>
+      <div class="note">
+        แปลงแบ่ง: ${thaiAreaStr(r.achieved)}<br>
+        แปลงเหลือ: ${thaiAreaStr(restArea)}
+        ${r.az!==undefined ? `<br>Azimuth เส้นแบ่ง: ${dmsPretty(r.az)} (${azToBearingStr(r.az)})` : ''}
+      </div>
+    </div>
+    ${cutPts.length>=2 ? `
+    <div class="result">
+      <h3>จุดปลายเส้นแบ่ง</h3>
+      <table><tr><th>จุด</th><th>N</th><th>E</th></tr>
+      ${cutPts.map((p,i)=>`<tr><td>C${i+1}</td><td>${fmt(p.n,4)}</td><td>${fmt(p.e,4)}</td></tr>`).join('')}
+      </table>
+      <div class="note">ใช้จุด C1–C2 นี้ไปปักหลักในสนามได้เลย</div>
+    </div>` : ''}
+    <div class="result">
+      <h3>พิกัดแปลงที่แบ่งได้</h3>
+      <table><tr><th>จุด</th><th>N</th><th>E</th></tr>
+      ${r.piece.map((p,i)=>`<tr><td>${i}</td><td>${fmt(p.n,4)}</td><td>${fmt(p.e,4)}</td></tr>`).join('')}
+      </table>
+      <div class="btn-row">
+        <button class="btn-secondary btn-small" onclick='sdExport(${JSON.stringify(r.piece)})'>ส่งออก CSV</button>
+        <button class="btn-secondary btn-small" onclick='tvExportAutoCAD(${JSON.stringify(r.piece)}, true)'>🔨 AutoCAD</button>
+      </div>
+    </div>`;
+  attachPlot(res, r.piece, true, 'แปลงที่แบ่งได้');
+  attachPlot(res, r.rest, true, 'แปลงที่เหลือ');
+}
+function sdExport(pts){
+  const csv = 'Point,N,E\n' + pts.map((p,i)=>`${i},${p.n.toFixed(4)},${p.e.toFixed(4)}`).join('\n');
+  downloadCsv(csv, 'subdivided_parcel.csv');
+}
+
+/* =====================================================================
+   MODULE 13: ELEVATION & EARTHWORK
+   Sub-mode A: cut/fill per point (existing Z vs design Z)
+   Sub-mode B: volume between cross-sections (average end area)
+===================================================================== */
+let lvMode = 'cutfill'; // 'cutfill' | 'volume' | 'tin'
+let lvPts  = [ {name:'', zx:'', zd:''} ];
+let lvSecs = [ {sta:'', cut:'', fill:''}, {sta:'', cut:'', fill:''} ];
+let lvTin  = [ {n:'', e:'', z:'', zd:''}, {n:'', e:'', z:'', zd:''}, {n:'', e:'', z:'', zd:''} ];
+let lvDesignMode = 'const'; // 'const' | 'perpoint'
+function renderLevel(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>⛰️ ระดับ &amp; งานดิน</h2>
+    <div class="seg">
+      <button class="${lvMode==='tin'?'on':''}" onclick="lvSetMode('tin')">จากพิกัด (TIN)</button>
+      <button class="${lvMode==='volume'?'on':''}" onclick="lvSetMode('volume')">หน้าตัด (AEA)</button>
+      <button class="${lvMode==='cutfill'?'on':''}" onclick="lvSetMode('cutfill')">ตัด/ถม รายจุด</button>
+    </div>
+    ${lvMode==='tin' ? `
+      <p class="desc">ใส่จุดสำรวจ N, E, ระดับดินเดิม ระบบจะสร้างโครงข่ายสามเหลี่ยม (Delaunay TIN) แล้วคำนวณปริมาตรตัด/ถมจากผิวดินจริง</p>
+      <div class="seg">
+        <button class="${lvDesignMode==='const'?'on':''}" onclick="lvSetDesign('const')">ระดับออกแบบคงที่</button>
+        <button class="${lvDesignMode==='perpoint'?'on':''}" onclick="lvSetDesign('perpoint')">ระดับออกแบบรายจุด</button>
+      </div>
+      ${lvDesignMode==='const' ? `
+      <div class="field-row">
+        <div class="field"><label>ระดับออกแบบ (ม.)</label><input id="lv_zdesign" type="number" step="any" placeholder="เช่น 100.500"></div>
+      </div>` : ''}
+      <div id="lv_tin"></div>
+      <div class="btn-row">
+        <button class="btn-secondary btn-small" onclick="lvTinAdd()">+ เพิ่มจุด</button>
+        <button class="btn-secondary btn-small" onclick="lvTinFromLib()">เติมจากคลัง</button>
+        <button class="btn-secondary btn-small" onclick="triggerFileImport(lvTinImportRows)">นำเข้า CSV</button>
+        <button class="btn-primary" onclick="lvCalcTin()">คำนวณปริมาตร</button>
+      </div>
+      <div class="note">รูปแบบ CSV: <span class="mono">ชื่อจุด,N,E,Z</span> (ตรงกับคลังพิกัด) · ต้องมีอย่างน้อย 3 จุด</div>
+    ` : lvMode==='cutfill' ? `
+      <p class="desc">เทียบระดับดินเดิมกับระดับออกแบบ ค่าบวก = ต้องตัด (Cut), ค่าลบ = ต้องถม (Fill)</p>
+      <div id="lv_pts"></div>
+      <div class="btn-row">
+        <button class="btn-secondary btn-small" onclick="lvAddPt()">+ เพิ่มจุด</button>
+        <button class="btn-secondary btn-small" onclick="triggerFileImport(lvImportRows)">นำเข้า CSV</button>
+        <button class="btn-primary" onclick="lvCalcCutFill()">คำนวณ</button>
+      </div>
+      <div class="note">รูปแบบ CSV: <span class="mono">ชื่อจุด,ระดับดินเดิม,ระดับออกแบบ</span></div>
+    ` : `
+      <p class="desc">ใส่พื้นที่หน้าตัดที่แต่ละสถานี ระบบคำนวณปริมาตรระหว่างหน้าตัดด้วยวิธี Average End Area: V = L × (A₁+A₂) / 2</p>
+      <div id="lv_secs"></div>
+      <div class="btn-row">
+        <button class="btn-secondary btn-small" onclick="lvAddSec()">+ เพิ่มหน้าตัด</button>
+        <button class="btn-primary" onclick="lvCalcVolume()">คำนวณปริมาตร</button>
+      </div>
+      <div class="note">สถานีต้องเรียงจากน้อยไปมาก · พื้นที่หน้าตัดหน่วย ตร.ม.</div>
+    `}
+    <div id="lv_result"></div>
+  </div>`;
+  if(lvMode==='cutfill') lvRenderPts();
+  else if(lvMode==='volume') lvRenderSecs();
+  else lvTinRender();
+}
+function lvSetMode(m){ lvMode=m; renderLevel(); }
+function lvSetDesign(m){ lvDesignMode=m; renderLevel(); }
+
+/* ---- TIN sub-mode ---- */
+function lvTinRender(){
+  const el=document.getElementById('lv_tin');
+  const perPt = lvDesignMode==='perpoint';
+  el.innerHTML = lvTin.map((p,i)=>`
+    <div class="rowline">
+      <div class="idx">${i+1}</div>
+      <div class="field"><label>N</label><input type="number" step="any" value="${esc(p.n)}" oninput="lvTin[${i}].n=this.value"></div>
+      <div class="field"><label>E</label><input type="number" step="any" value="${esc(p.e)}" oninput="lvTin[${i}].e=this.value"></div>
+      <div class="field"><label>Z ดินเดิม</label><input type="number" step="any" value="${esc(p.z)}" oninput="lvTin[${i}].z=this.value"></div>
+      ${perPt ? `<div class="field"><label>Z ออกแบบ</label><input type="number" step="any" value="${esc(p.zd)}" oninput="lvTin[${i}].zd=this.value"></div>` : ''}
+      <button class="btn-danger" onclick="lvTinRemove(${i})">ลบ</button>
+    </div>`).join('');
+}
+function lvTinAdd(){ lvTin.push({n:'',e:'',z:'',zd:''}); lvTinRender(); }
+function lvTinRemove(i){ if(lvTin.length<=3) return; lvTin.splice(i,1); lvTinRender(); }
+function lvTinFromLib(){
+  const valid = libPoints.filter(p=>p.n!=='' && p.e!=='' && !isNaN(parseFloat(p.n)) && !isNaN(parseFloat(p.e)));
+  if(!valid.length){ alert('คลังพิกัดว่างเปล่า หรือยังไม่มีจุดที่มีค่า N,E'); return; }
+  valid.forEach(p=> lvTin.push({n:p.n, e:p.e, z:p.z||'', zd:''}));
+  lvTinRender();
+}
+function lvTinImportRows(rows){
+  rows.forEach(r=> lvTin.push({n:r.n, e:r.e, z:r.z||'', zd:''}));
+  lvTinRender();
+}
+function lvCalcTin(){
+  const res=document.getElementById('lv_result');
+  const perPt = lvDesignMode==='perpoint';
+  let zConst = NaN;
+  if(!perPt){
+    zConst = parseFloat(document.getElementById('lv_zdesign').value);
+    if(isNaN(zConst)){ res.innerHTML=`<div class="error-box">กรอกระดับออกแบบ</div>`; return; }
+  }
+  const pts=[];
+  for(let i=0;i<lvTin.length;i++){
+    const n=parseFloat(lvTin[i].n), e=parseFloat(lvTin[i].e), z=parseFloat(lvTin[i].z);
+    if(isNaN(n)||isNaN(e)||isNaN(z)){ res.innerHTML=`<div class="error-box">จุดที่ ${i+1}: กรอก N, E และ Z ดินเดิมให้ครบ</div>`; return; }
+    let zd = zConst;
+    if(perPt){
+      zd = parseFloat(lvTin[i].zd);
+      if(isNaN(zd)){ res.innerHTML=`<div class="error-box">จุดที่ ${i+1}: กรอก Z ออกแบบ</div>`; return; }
+    }
+    pts.push({n, e, z, zd, h:z-zd});
+  }
+  if(pts.length<3){ res.innerHTML=`<div class="error-box">ต้องมีอย่างน้อย 3 จุด</div>`; return; }
+
+  const r = tinVolume(pts);
+  if(!r.tris.length){ res.innerHTML=`<div class="error-box">สร้างสามเหลี่ยมไม่ได้ — จุดทั้งหมดอาจอยู่บนเส้นตรงเดียวกัน</div>`; return; }
+
+  const net = r.net;
+  const rows = pts.map((p,i)=>`<tr>
+      <td>${i+1}</td><td>${fmt(p.n,3)}</td><td>${fmt(p.e,3)}</td>
+      <td>${fmt(p.z,3)}</td><td>${fmt(p.zd,3)}</td>
+      <td style="color:${p.h>0?'var(--rust)':(p.h<0?'var(--pine)':'inherit')}">${p.h>0?'+':''}${fmt(p.h,3)}</td>
+    </tr>`).join('');
+
+  res.innerHTML=`<div class="result">
+    <h3>ปริมาตรจาก TIN</h3>
+    <div class="stat-grid">
+      <div class="stat"><div class="lbl">ปริมาตรตัด</div><div class="val">${fmt(r.cut,2)} ลบ.ม.</div></div>
+      <div class="stat"><div class="lbl">ปริมาตรถม</div><div class="val">${fmt(r.fill,2)} ลบ.ม.</div></div>
+      <div class="stat ${net>=0?'good':'warn'}"><div class="lbl">${net>=0?'ดินเหลือ (ตัด−ถม)':'ดินขาด (ต้องหาเพิ่ม)'}</div><div class="val">${fmt(Math.abs(net),2)} ลบ.ม.</div></div>
+      <div class="stat"><div class="lbl">พื้นที่ผิว (ราบ)</div><div class="val">${fmt(r.area,2)} ตร.ม.</div></div>
+    </div>
+    <div class="note">สร้างจาก ${r.tris.length} สามเหลี่ยม · คิดเฉพาะพื้นที่ภายในขอบนอกสุด (convex hull) ของจุดที่ยิงมา ถ้าแปลงเป็นรูปเว้า ให้ยิงจุดตามขอบให้ครบ</div>
+  </div>
+  <div class="result">
+    <h3>ตัด/ถม รายจุด</h3>
+    <table><tr><th>#</th><th>N</th><th>E</th><th>Z เดิม</th><th>Z ออกแบบ</th><th>ตัด(+)/ถม(−)</th></tr>${rows}</table>
+    <div class="btn-row"><button class="btn-secondary btn-small" onclick='lvTinExport(${JSON.stringify(pts)})'>ส่งออก CSV</button></div>
+  </div>`;
+  attachTinPlot(res, pts, r.tris);
+}
+function lvTinExport(pts){
+  const csv = 'Point,N,E,Z_existing,Z_design,Cut(+)/Fill(-)\n' +
+    pts.map((p,i)=>`${i+1},${p.n.toFixed(4)},${p.e.toFixed(4)},${p.z.toFixed(3)},${p.zd.toFixed(3)},${p.h.toFixed(3)}`).join('\n');
+  downloadCsv(csv, 'tin_cutfill.csv');
+}
+/* TIN plot: triangles shaded red (cut) / green (fill) by their mean h */
+function attachTinPlot(resultEl, pts, tris){
+  const box=document.createElement('div');
+  box.className='result';
+  box.innerHTML='<h3>โครงข่ายสามเหลี่ยม (TIN)</h3>';
+  resultEl.appendChild(box);
+  const cv=document.createElement('canvas');
+  cv.className='plot-canvas'; cv.width=320; cv.height=320;
+  box.appendChild(cv);
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+
+  const pad=28, w=cv.width-2*pad, h=cv.height-2*pad;
+  let minN=pts[0].n,maxN=pts[0].n,minE=pts[0].e,maxE=pts[0].e;
+  for(const p of pts){ minN=Math.min(minN,p.n); maxN=Math.max(maxN,p.n); minE=Math.min(minE,p.e); maxE=Math.max(maxE,p.e); }
+  const rng=Math.max(maxN-minN, maxE-minE)||1;
+  const scale=Math.min(w,h)/(rng*1.15);
+  const midN=(minN+maxN)/2, midE=(minE+maxE)/2;
+  const cx=pad+w/2, cy=pad+h/2;
+  const X=e=>cx+(e-midE)*scale, Y=n=>cy-(n-midN)*scale;
+
+  const maxAbs = Math.max(1e-9, ...pts.map(p=>Math.abs(p.h)));
+  for(const t of tris){
+    const mh=(t.a.h+t.b.h+t.c.h)/3;
+    const alpha = Math.min(0.75, Math.abs(mh)/maxAbs*0.75 + 0.08);
+    ctx.fillStyle = mh>=0 ? `rgba(166,51,40,${alpha})` : `rgba(47,111,94,${alpha})`;
+    ctx.beginPath();
+    ctx.moveTo(X(t.a.x), Y(t.a.y));
+    ctx.lineTo(X(t.b.x), Y(t.b.y));
+    ctx.lineTo(X(t.c.x), Y(t.c.y));
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(60,60,60,0.45)'; ctx.lineWidth=1; ctx.stroke();
+  }
+  for(let i=0;i<pts.length;i++){
+    const x=X(pts[i].e), y=Y(pts[i].n);
+    ctx.fillStyle='#1F2E2B';
+    ctx.beginPath(); ctx.arc(x,y,3,0,2*Math.PI); ctx.fill();
+    ctx.font='9px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(i+1, x, y-6);
+  }
+  ctx.font='bold 11px sans-serif'; ctx.textAlign='left';
+  ctx.fillStyle='#A63328'; ctx.fillText('■ ตัด', 6, 14);
+  ctx.fillStyle='#2F6F5E'; ctx.fillText('■ ถม', 46, 14);
+  ctx.fillStyle='#1F2E2B'; ctx.fillText('N ↑', 6, 28);
+  addPngButton(box, cv, 'tin_plot.png');
+}
+
+function lvRenderPts(){
+  const el=document.getElementById('lv_pts');
+  el.innerHTML = lvPts.map((p,i)=>`
+    <div class="rowline">
+      <div class="idx">${i+1}</div>
+      <div class="field"><label>ชื่อจุด</label><input value="${esc(p.name)}" oninput="lvPts[${i}].name=this.value"></div>
+      <div class="field"><label>ระดับดินเดิม</label><input type="number" step="any" value="${esc(p.zx)}" oninput="lvPts[${i}].zx=this.value"></div>
+      <div class="field"><label>ระดับออกแบบ</label><input type="number" step="any" value="${esc(p.zd)}" oninput="lvPts[${i}].zd=this.value"></div>
+      <button class="btn-danger" onclick="lvRemovePt(${i})">ลบ</button>
+    </div>`).join('');
+}
+function lvAddPt(){ lvPts.push({name:'',zx:'',zd:''}); lvRenderPts(); }
+function lvRemovePt(i){ if(lvPts.length<=1) return; lvPts.splice(i,1); lvRenderPts(); }
+function lvImportRows(rows){
+  // csvRowsToPoints maps to {name,n,e,z}; reuse: name, n=existing Z, e=design Z
+  rows.forEach(r=> lvPts.push({name:r.name||'', zx:r.n, zd:r.e}));
+  lvRenderPts();
+}
+function lvCalcCutFill(){
+  const res=document.getElementById('lv_result');
+  const rows=[];
+  let sumCut=0, sumFill=0;
+  for(let i=0;i<lvPts.length;i++){
+    const zx=parseFloat(lvPts[i].zx), zd=parseFloat(lvPts[i].zd);
+    if(isNaN(zx)||isNaN(zd)){ res.innerHTML=`<div class="error-box">จุดที่ ${i+1}: กรอกระดับให้ครบ</div>`; return; }
+    const d = zx-zd;                     // + = cut, - = fill
+    if(d>0) sumCut+=d; else sumFill+=-d;
+    rows.push(`<tr>
+      <td>${lvPts[i].name||i+1}</td>
+      <td>${fmt(zx,3)}</td><td>${fmt(zd,3)}</td>
+      <td style="color:${d>0?'var(--rust)':(d<0?'var(--pine)':'inherit')}">${d>0?'+':''}${fmt(d,3)}</td>
+      <td>${d>0?'ตัด':(d<0?'ถม':'พอดี')}</td>
+    </tr>`);
+  }
+  res.innerHTML=`<div class="result">
+    <h3>ผลตัด/ถม รายจุด</h3>
+    <table><tr><th>จุด</th><th>ดินเดิม</th><th>ออกแบบ</th><th>ผลต่าง (ม.)</th><th>สถานะ</th></tr>${rows.join('')}</table>
+    <div class="stat-grid">
+      <div class="stat"><div class="lbl">ผลรวมความลึกตัด</div><div class="val">${fmt(sumCut,3)} ม.</div></div>
+      <div class="stat"><div class="lbl">ผลรวมความสูงถม</div><div class="val">${fmt(sumFill,3)} ม.</div></div>
+    </div>
+    <div class="note">ค่านี้เป็นผลรวมความลึก/ความสูง ไม่ใช่ปริมาตร — ถ้าต้องการปริมาตร ใช้โหมด Average End Area</div>
+  </div>`;
+}
+
+function lvRenderSecs(){
+  const el=document.getElementById('lv_secs');
+  el.innerHTML = lvSecs.map((s,i)=>`
+    <div class="rowline">
+      <div class="idx">${i+1}</div>
+      <div class="field"><label>สถานี (ม.)</label><input type="number" step="any" value="${esc(s.sta)}" oninput="lvSecs[${i}].sta=this.value"></div>
+      <div class="field"><label>พื้นที่ตัด (ตร.ม.)</label><input type="number" step="any" value="${esc(s.cut)}" oninput="lvSecs[${i}].cut=this.value"></div>
+      <div class="field"><label>พื้นที่ถม (ตร.ม.)</label><input type="number" step="any" value="${esc(s.fill)}" oninput="lvSecs[${i}].fill=this.value"></div>
+      <button class="btn-danger" onclick="lvRemoveSec(${i})">ลบ</button>
+    </div>`).join('');
+}
+function lvAddSec(){ lvSecs.push({sta:'',cut:'',fill:''}); lvRenderSecs(); }
+function lvRemoveSec(i){ if(lvSecs.length<=2) return; lvSecs.splice(i,1); lvRenderSecs(); }
+function lvCalcVolume(){
+  const res=document.getElementById('lv_result');
+  const secs=[];
+  for(let i=0;i<lvSecs.length;i++){
+    const sta=parseFloat(lvSecs[i].sta);
+    const cut=parseFloat(lvSecs[i].cut||'0');
+    const fill=parseFloat(lvSecs[i].fill||'0');
+    if(isNaN(sta)||isNaN(cut)||isNaN(fill)){ res.innerHTML=`<div class="error-box">หน้าตัดที่ ${i+1}: กรอกสถานีและพื้นที่ให้ถูกต้อง</div>`; return; }
+    if(cut<0||fill<0){ res.innerHTML=`<div class="error-box">หน้าตัดที่ ${i+1}: พื้นที่ต้องไม่ติดลบ</div>`; return; }
+    secs.push({sta,cut,fill});
+  }
+  for(let i=1;i<secs.length;i++){
+    if(secs[i].sta <= secs[i-1].sta){ res.innerHTML=`<div class="error-box">สถานีต้องเรียงจากน้อยไปมาก (ตรวจหน้าตัดที่ ${i+1})</div>`; return; }
+  }
+  let rows='', totCut=0, totFill=0;
+  for(let i=0;i<secs.length-1;i++){
+    const A=secs[i], B=secs[i+1];
+    const L=B.sta-A.sta;
+    const vCut = L*(A.cut+B.cut)/2;
+    const vFill= L*(A.fill+B.fill)/2;
+    totCut+=vCut; totFill+=vFill;
+    rows += `<tr><td>${fmt(A.sta,2)}–${fmt(B.sta,2)}</td><td>${fmt(L,2)}</td><td>${fmt(vCut,2)}</td><td>${fmt(vFill,2)}</td></tr>`;
+  }
+  const net = totCut-totFill;
+  res.innerHTML=`<div class="result">
+    <h3>ปริมาตรระหว่างหน้าตัด</h3>
+    <table><tr><th>ช่วงสถานี</th><th>ระยะ (ม.)</th><th>ตัด (ลบ.ม.)</th><th>ถม (ลบ.ม.)</th></tr>${rows}</table>
+    <div class="stat-grid">
+      <div class="stat"><div class="lbl">ปริมาตรตัดรวม</div><div class="val">${fmt(totCut,2)} ลบ.ม.</div></div>
+      <div class="stat"><div class="lbl">ปริมาตรถมรวม</div><div class="val">${fmt(totFill,2)} ลบ.ม.</div></div>
+      <div class="stat ${net>=0?'good':'warn'}"><div class="lbl">${net>=0?'ดินเหลือ (ตัด−ถม)':'ดินขาด (ต้องหาเพิ่ม)'}</div><div class="val">${fmt(Math.abs(net),2)} ลบ.ม.</div></div>
+    </div>
+    <div class="note">วิธี Average End Area จะให้ค่า<strong>สูงกว่าความจริง</strong>เมื่อหน้าตัดเปลี่ยนแปลงแบบไม่เชิงเส้น (เช่น ช่วงเข้าใกล้จุดที่พื้นที่เป็นศูนย์) หากต้องการความแม่นยำสูงให้ลดระยะระหว่างหน้าตัดลง</div>
+  </div>`;
+  attachBar(res, secs);
+}
+/* Simple cut/fill bar chart along the chainage */
+function attachBar(resultEl, secs){
+  const box=document.createElement('div');
+  box.className='result';
+  box.innerHTML='<h3>พื้นที่หน้าตัดตามสถานี</h3>';
+  resultEl.appendChild(box);
+  const cv=document.createElement('canvas');
+  cv.className='plot-canvas'; cv.width=320; cv.height=200;
+  box.appendChild(cv);
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+  const pad=30, w=cv.width-2*pad, h=cv.height-2*pad;
+  const maxA=Math.max(1, ...secs.map(s=>Math.max(s.cut,s.fill)));
+  const x=i=> pad + (secs.length===1?0:i*w/(secs.length-1));
+  const y=a=> pad + h - (a/maxA)*h;
+  // axis
+  ctx.strokeStyle='#999'; ctx.beginPath(); ctx.moveTo(pad,pad); ctx.lineTo(pad,pad+h); ctx.lineTo(pad+w,pad+h); ctx.stroke();
+  // cut line
+  ctx.strokeStyle='#A63328'; ctx.lineWidth=2; ctx.beginPath();
+  secs.forEach((s,i)=> i?ctx.lineTo(x(i),y(s.cut)):ctx.moveTo(x(i),y(s.cut))); ctx.stroke();
+  // fill line
+  ctx.strokeStyle='#2F6F5E'; ctx.beginPath();
+  secs.forEach((s,i)=> i?ctx.lineTo(x(i),y(s.fill)):ctx.moveTo(x(i),y(s.fill))); ctx.stroke();
+  ctx.font='10px sans-serif';
+  ctx.fillStyle='#A63328'; ctx.fillText('ตัด', pad+4, pad+10);
+  ctx.fillStyle='#2F6F5E'; ctx.fillText('ถม', pad+34, pad+10);
+  ctx.fillStyle='#555'; ctx.fillText(fmt(maxA,1)+' ตร.ม.', pad+4, pad-6);
+  addPngButton(box, cv, 'cutfill_section_chart.png');
+}
+
+/* =====================================================================
+   MODULE 14: CURVE — horizontal (simple circular curve) and vertical
+   (equal-tangent parabolic curve) layout calculations
+===================================================================== */
+let curveMode = 'hz'; // 'hz' | 'vt'
+let hcState = { R:'', delta:'', turn:'right', piSta:'', interval:'20', piN:'', piE:'', backAz:'' };
+let vcState = { pviSta:'', pviElev:'', g1:'', g2:'', L:'', interval:'20' };
+
+function renderCurve(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>🛤️ คำนวณโค้ง (Curve)</h2>
+    <div class="seg">
+      <button class="${curveMode==='hz'?'on':''}" onclick="curveSetMode('hz')">โค้งราบ (Horizontal)</button>
+      <button class="${curveMode==='vt'?'on':''}" onclick="curveSetMode('vt')">โค้งดิ่ง (Vertical)</button>
+    </div>
+    <div id="curve_body"></div>
+  </div>`;
+  if(curveMode==='hz') renderHCurve(); else renderVCurve();
+}
+function curveSetMode(m){ curveMode=m; renderCurve(); }
+
+/* ---------------- HORIZONTAL SIMPLE CIRCULAR CURVE ---------------- */
+function renderHCurve(){
+  const el = document.getElementById('curve_body');
+  el.innerHTML = `
+    <p class="desc">โค้งวงกลมธรรมดา (Simple Curve) จากรัศมี R และมุมเบี่ยง (Δ) คำนวณระยะแทนเจนต์ ความยาวโค้ง และตารางปักหลักด้วยวิธีมุมเบี่ยง (Deflection Angle)</p>
+    <div class="field-row">
+      <div class="field"><label>รัศมี R (ม.)</label><input id="hc_r" type="number" step="any" value="${esc(hcState.R)}" oninput="hcState.R=this.value" placeholder="เช่น 200"></div>
+      <div class="field"><label>มุมเบี่ยง Δ</label><input id="hc_delta" type="number" step="any" value="${esc(hcState.delta)}" oninput="hcState.delta=this.value" placeholder="${ANGLE_MODE==='dms'?'เช่น 45.3000':'เช่น 45.5'}"></div>
+      <div class="field"><label>ทิศทางโค้ง</label>
+        <select id="hc_turn" onchange="hcState.turn=this.value">
+          <option value="right" ${hcState.turn==='right'?'selected':''}>เลี้ยวขวา</option>
+          <option value="left" ${hcState.turn==='left'?'selected':''}>เลี้ยวซ้าย</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>สถานี PI (ม.)</label><input id="hc_pista" type="number" step="any" value="${esc(hcState.piSta)}" oninput="hcState.piSta=this.value" placeholder="เช่น 250"></div>
+      <div class="field"><label>ระยะห่างตารางปักหลัก (ม.)</label><input id="hc_interval" type="number" step="any" value="${esc(hcState.interval)}" oninput="hcState.interval=this.value"></div>
+    </div>
+    <hr class="div">
+    <p class="desc" style="margin-bottom:6px;">พิกัดจุด PI และอะซิมุทแนวหลัง (ไม่บังคับ — ใส่เพื่อให้ได้พิกัด PC, PT และจุดปักหลักด้วย)</p>
+    <div class="field-row">
+      <div class="field"><label>PI: N</label><input id="hc_pin" type="number" step="any" value="${esc(hcState.piN)}" oninput="hcState.piN=this.value"></div>
+      <div class="field"><label>PI: E</label><input id="hc_pie" type="number" step="any" value="${esc(hcState.piE)}" oninput="hcState.piE=this.value"></div>
+      <div class="field"><label>Azimuth แนวหลัง (เข้าสู่ PI)</label><input id="hc_backaz" type="number" step="any" value="${esc(hcState.backAz)}" oninput="hcState.backAz=this.value"></div>
+    </div>
+    <div class="btn-row"><button class="btn-primary" onclick="hcCalc()">คำนวณ</button></div>
+    <div id="hc_result"></div>
+  `;
+}
+function hcCalc(){
+  const res = document.getElementById('hc_result');
+  const R = parseFloat(document.getElementById('hc_r').value);
+  const delta = angToDeg(document.getElementById('hc_delta').value);
+  const turnRight = document.getElementById('hc_turn').value==='right';
+  const piSta = parseFloat(document.getElementById('hc_pista').value);
+  const interval = parseFloat(document.getElementById('hc_interval').value);
+  if(isNaN(R) || R<=0){ res.innerHTML=`<div class="error-box">กรอกรัศมี R ให้ถูกต้อง (มากกว่า 0)</div>`; return; }
+  if(isNaN(delta) || delta<=0 || delta>=180){ res.innerHTML=`<div class="error-box">กรอกมุมเบี่ยง Δ ให้ถูกต้อง (0°–180°)</div>`; return; }
+  if(isNaN(piSta)){ res.innerHTML=`<div class="error-box">กรอกสถานี PI</div>`; return; }
+  if(isNaN(interval) || interval<=0){ res.innerHTML=`<div class="error-box">กรอกระยะห่างตารางปักหลักให้ถูกต้อง</div>`; return; }
+
+  const dRad = delta*D2R;
+  const T = R*Math.tan(dRad/2);
+  const L = R*dRad;
+  const E = R*(1/Math.cos(dRad/2) - 1);
+  const M = R*(1 - Math.cos(dRad/2));
+  const LC = 2*R*Math.sin(dRad/2);
+  const pcSta = piSta - T;
+  const ptSta = pcSta + L;
+
+  // Optional coordinates
+  const piN = parseFloat(document.getElementById('hc_pin').value);
+  const piE = parseFloat(document.getElementById('hc_pie').value);
+  const backAz = angToDeg(document.getElementById('hc_backaz').value);
+  const hasCoords = !isNaN(piN) && !isNaN(piE) && !isNaN(backAz);
+  let PC=null, PT=null, O=null, fwdAz=null;
+  if(hasCoords){
+    const PI = {n:piN, e:piE};
+    fwdAz = norm360(turnRight ? backAz+delta : backAz-delta);
+    PC = radiationPoint(PI, norm360(backAz+180), T);
+    PT = radiationPoint(PI, fwdAz, T);
+    O  = radiationPoint(PC, norm360(backAz + (turnRight?90:-90)), R);
+  }
+
+  // Stakeout table by deflection angle from PC
+  let stations = [];
+  let s = 0;
+  while(s < L){ stations.push(s); s += interval; }
+  stations.push(L);
+  // Snap stations to round chainages when possible (start from ceil(pcSta/interval)*interval)
+  let rows = '';
+  const tableData = [];
+  for(const l of stations){
+    const defl = (l/(2*R))*R2D;         // degrees
+    const chord = 2*R*Math.sin(l/(2*R));
+    const sta = pcSta + l;
+    let coordCell = '<td colspan="2" style="color:var(--ink-soft);">—</td>';
+    let pt = null;
+    if(hasCoords){
+      const az = norm360(backAz + (turnRight? defl : -defl));
+      pt = radiationPoint(PC, az, chord);
+      coordCell = `<td>${fmt(pt.n,4)}</td><td>${fmt(pt.e,4)}</td>`;
+    }
+    rows += `<tr><td>${fmt(sta,3)}</td><td>${fmt(l,3)}</td><td>${fmt(chord,3)}</td><td>${dmsPretty(defl)}</td>${coordCell}</tr>`;
+    tableData.push({sta, l, chord, defl, n:pt?pt.n:null, e:pt?pt.e:null});
+  }
+
+  res.innerHTML = `
+    <div class="result">
+      <h3>องค์ประกอบโค้ง (Curve Elements)</h3>
+      <div class="stat-grid">
+        <div class="stat"><div class="lbl">แทนเจนต์ T</div><div class="val">${fmt(T,3)} ม.</div></div>
+        <div class="stat"><div class="lbl">ความยาวโค้ง L</div><div class="val">${fmt(L,3)} ม.</div></div>
+        <div class="stat"><div class="lbl">คอร์ดยาว LC</div><div class="val">${fmt(LC,3)} ม.</div></div>
+        <div class="stat"><div class="lbl">External E</div><div class="val">${fmt(E,3)} ม.</div></div>
+        <div class="stat"><div class="lbl">Middle Ordinate M</div><div class="val">${fmt(M,3)} ม.</div></div>
+        <div class="stat"><div class="lbl">รัศมี R</div><div class="val">${fmt(R,3)} ม.</div></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat good"><div class="lbl">สถานี PC</div><div class="val">${fmt(pcSta,3)}</div></div>
+        <div class="stat good"><div class="lbl">สถานี PI</div><div class="val">${fmt(piSta,3)}</div></div>
+        <div class="stat good"><div class="lbl">สถานี PT</div><div class="val">${fmt(ptSta,3)}</div></div>
+      </div>
+      ${hasCoords ? `<div class="note">พิกัด PC: N ${fmt(PC.n,4)}, E ${fmt(PC.e,4)} · พิกัด PT: N ${fmt(PT.n,4)}, E ${fmt(PT.e,4)} · จุดศูนย์กลาง O: N ${fmt(O.n,4)}, E ${fmt(O.e,4)} · Azimuth แนวหน้า (PI→PT): ${dmsPretty(fwdAz)}</div>`
+        : `<div class="note">ใส่พิกัด PI และ Azimuth แนวหลังด้านบน เพื่อให้คำนวณพิกัด PC, PT และจุดปักหลักแต่ละสถานีด้วย</div>`}
+    </div>
+    <div class="result">
+      <h3>ตารางปักหลัก (มุมเบี่ยงจาก PC — ${turnRight?'หมุนขวา':'หมุนซ้าย'})</h3>
+      <table><tr><th>สถานี</th><th>ระยะโค้งจาก PC</th><th>คอร์ด</th><th>มุมเบี่ยง</th><th>N</th><th>E</th></tr>${rows}</table>
+      <div class="btn-row"><button class="btn-secondary btn-small" onclick='hcExport(${JSON.stringify(tableData)})'>ส่งออก CSV</button></div>
+      <div class="note">มุมเบี่ยง = มุมระหว่างแนวเส้นสัมผัส (Tangent) ที่ PC กับเส้นคอร์ดไปยังจุดนั้น ใช้ตั้งกล้องที่ PC เล็ง PI แล้วหมุนตามมุมเบี่ยง จากนั้นวัดระยะคอร์ดออกไป</div>
+    </div>`;
+  if(hasCoords){
+    const plotPts = tableData.filter(p=>p.n!==null).map(p=>({n:p.n,e:p.e}));
+    plotPts.unshift({n:PC.n,e:PC.e});
+    attachPlot(res, [{n:PC.n,e:PC.e}, {n:piN,e:piE}, {n:PT.n,e:PT.e}], false, 'แนวแทนเจนต์ PC–PI–PT');
+    attachPlot(res, plotPts, false, 'จุดโค้ง (PC → PT)');
+  }
+}
+function hcExport(rows){
+  const csv = 'Station,ArcFromPC,Chord,DeflectionDeg,N,E\n' +
+    rows.map(r=>`${r.sta.toFixed(3)},${r.l.toFixed(3)},${r.chord.toFixed(3)},${r.defl.toFixed(4)},${r.n!==null?r.n.toFixed(4):''},${r.e!==null?r.e.toFixed(4):''}`).join('\n');
+  downloadCsv(csv, 'horizontal_curve_stakeout.csv');
+}
+
+/* ---------------- VERTICAL PARABOLIC CURVE (equal tangent) ---------------- */
+function renderVCurve(){
+  const el = document.getElementById('curve_body');
+  el.innerHTML = `
+    <p class="desc">โค้งดิ่งพาราโบลาสมมาตร (Equal-Tangent Vertical Curve) จากความลาดชันเข้า/ออก (g1, g2) และความยาวโค้ง L คำนวณระดับตลอดแนวโค้งและจุดสูงสุด/ต่ำสุด</p>
+    <div class="field-row">
+      <div class="field"><label>สถานี PVI (ม.)</label><input id="vc_sta" type="number" step="any" value="${esc(vcState.pviSta)}" oninput="vcState.pviSta=this.value"></div>
+      <div class="field"><label>ระดับ PVI (ม.)</label><input id="vc_elev" type="number" step="any" value="${esc(vcState.pviElev)}" oninput="vcState.pviElev=this.value"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>ความลาดชันเข้า g1 (%)</label><input id="vc_g1" type="number" step="any" value="${esc(vcState.g1)}" oninput="vcState.g1=this.value" placeholder="เช่น 3 หรือ -2.5"></div>
+      <div class="field"><label>ความลาดชันออก g2 (%)</label><input id="vc_g2" type="number" step="any" value="${esc(vcState.g2)}" oninput="vcState.g2=this.value" placeholder="เช่น -2 หรือ 1.5"></div>
+      <div class="field"><label>ความยาวโค้ง L (ม.)</label><input id="vc_l" type="number" step="any" value="${esc(vcState.L)}" oninput="vcState.L=this.value"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>ระยะห่างตารางระดับ (ม.)</label><input id="vc_interval" type="number" step="any" value="${esc(vcState.interval)}" oninput="vcState.interval=this.value"></div>
+    </div>
+    <div class="btn-row"><button class="btn-primary" onclick="vcCalc()">คำนวณ</button></div>
+    <div id="vc_result"></div>
+  `;
+}
+function vcCalc(){
+  const res = document.getElementById('vc_result');
+  const pviSta = parseFloat(document.getElementById('vc_sta').value);
+  const pviElev = parseFloat(document.getElementById('vc_elev').value);
+  const g1 = parseFloat(document.getElementById('vc_g1').value);
+  const g2 = parseFloat(document.getElementById('vc_g2').value);
+  const L = parseFloat(document.getElementById('vc_l').value);
+  const interval = parseFloat(document.getElementById('vc_interval').value);
+  if([pviSta,pviElev,g1,g2,L].some(isNaN) || L<=0){ res.innerHTML=`<div class="error-box">กรอกข้อมูลให้ครบและความยาวโค้ง L ต้องมากกว่า 0</div>`; return; }
+  if(isNaN(interval) || interval<=0){ res.innerHTML=`<div class="error-box">กรอกระยะห่างตารางระดับให้ถูกต้อง</div>`; return; }
+
+  const g1d = g1/100, g2d = g2/100;
+  const bvcSta = pviSta - L/2, evcSta = pviSta + L/2;
+  const bvcElev = pviElev - g1d*(L/2);
+  const evcElev = pviElev + g2d*(L/2);
+  const a = (g2d-g1d)/(2*L);     // curvature coefficient: y = bvcElev + g1d*x + a*x^2
+  const kind = g1>g2 ? 'สันเขา (Crest)' : (g1<g2 ? 'ท้องคุ้ง (Sag)' : 'เส้นตรง (ไม่มีความโค้ง)');
+
+  let hlNote = '';
+  let hlX = null, hlSta = null, hlElev = null;
+  if(Math.abs(g2d-g1d) > 1e-12){
+    const x = -g1d/(2*a);
+    if(x>=0 && x<=L){
+      hlX = x; hlSta = bvcSta + x; hlElev = bvcElev + g1d*x + a*x*x;
+      hlNote = `<div class="stat ${g1>g2?'warn':'good'}"><div class="lbl">${g1>g2?'จุดสูงสุด (High Point)':'จุดต่ำสุด (Low Point)'}</div><div class="val">สถานี ${fmt(hlSta,3)} = ${fmt(hlElev,3)} ม.</div></div>`;
+    }
+  }
+
+  let stations = [];
+  let s = 0;
+  while(s < L){ stations.push(s); s += interval; }
+  stations.push(L);
+  const tableData = [];
+  let rows = '';
+  for(const x of stations){
+    const elev = bvcElev + g1d*x + a*x*x;
+    const sta = bvcSta + x;
+    const isHl = hlX!==null && Math.abs(x-hlX)<1e-9;
+    rows += `<tr${isHl?' style="color:var(--accent);font-weight:700;"':''}><td>${fmt(sta,3)}</td><td>${fmt(x,3)}</td><td>${fmt(elev,3)}</td>${isHl?' <td>← จุดสูงสุด/ต่ำสุด</td>':'<td></td>'}</tr>`;
+    tableData.push({sta, x, elev});
+  }
+
+  res.innerHTML = `
+    <div class="result">
+      <h3>องค์ประกอบโค้งดิ่ง (${kind})</h3>
+      <div class="stat-grid">
+        <div class="stat"><div class="lbl">สถานี BVC</div><div class="val">${fmt(bvcSta,3)}</div></div>
+        <div class="stat"><div class="lbl">ระดับ BVC</div><div class="val">${fmt(bvcElev,3)} ม.</div></div>
+        <div class="stat"><div class="lbl">สถานี EVC</div><div class="val">${fmt(evcSta,3)}</div></div>
+        <div class="stat"><div class="lbl">ระดับ EVC</div><div class="val">${fmt(evcElev,3)} ม.</div></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="lbl">สถานี PVI</div><div class="val">${fmt(pviSta,3)}</div></div>
+        <div class="stat"><div class="lbl">ระดับ PVI</div><div class="val">${fmt(pviElev,3)} ม.</div></div>
+        ${hlNote || `<div class="stat"><div class="lbl">จุดสูงสุด/ต่ำสุด</div><div class="val">อยู่นอกช่วงโค้ง</div></div>`}
+      </div>
+    </div>
+    <div class="result">
+      <h3>ตารางระดับตลอดแนวโค้ง</h3>
+      <table><tr><th>สถานี</th><th>ระยะจาก BVC</th><th>ระดับ (ม.)</th><th></th></tr>${rows}</table>
+      <div class="btn-row"><button class="btn-secondary btn-small" onclick='vcExport(${JSON.stringify(tableData)})'>ส่งออก CSV</button></div>
+    </div>`;
+  attachVCurvePlot(res, tableData, bvcElev, evcElev);
+}
+function vcExport(rows){
+  const csv = 'Station,DistFromBVC,Elevation\n' + rows.map(r=>`${r.sta.toFixed(3)},${r.x.toFixed(3)},${r.elev.toFixed(3)}`).join('\n');
+  downloadCsv(csv, 'vertical_curve_elevations.csv');
+}
+/* Simple elevation-vs-station line for the vertical curve */
+function attachVCurvePlot(resultEl, rows, bvcElev, evcElev){
+  const box=document.createElement('div');
+  box.className='result';
+  box.innerHTML='<h3>รูปตัดตามยาว (Profile)</h3>';
+  resultEl.appendChild(box);
+  const cv=document.createElement('canvas');
+  cv.className='plot-canvas'; cv.width=320; cv.height=200;
+  box.appendChild(cv);
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+  const pad=34, w=cv.width-2*pad, h=cv.height-2*pad;
+  const elevs = rows.map(r=>r.elev);
+  const minE=Math.min(...elevs), maxE=Math.max(...elevs);
+  const rng = (maxE-minE)||1;
+  const L = rows[rows.length-1].x || 1;
+  const X = x=> pad + (x/L)*w;
+  const Y = e=> pad + h - ((e-minE)/rng)*h;
+  ctx.strokeStyle='#999'; ctx.beginPath(); ctx.moveTo(pad,pad); ctx.lineTo(pad,pad+h); ctx.lineTo(pad+w,pad+h); ctx.stroke();
+  ctx.strokeStyle='#C1541E'; ctx.lineWidth=2; ctx.beginPath();
+  rows.forEach((r,i)=> i? ctx.lineTo(X(r.x),Y(r.elev)) : ctx.moveTo(X(r.x),Y(r.elev)));
+  ctx.stroke();
+  ctx.fillStyle='#1F2E2B'; ctx.font='10px sans-serif';
+  ctx.fillText(fmt(maxE,2)+' ม.', pad+4, pad-6);
+  ctx.fillText(fmt(minE,2)+' ม.', pad+4, pad+h+14);
+  addPngButton(box, cv, 'vertical_curve_profile.png');
+}
+
+/* =====================================================================
+   MODULE 15: PROJECT — snapshot every module's state, save to device or
+   to a .json file. File export is the reliable path; device storage can
+   be unavailable in some browsers.
+===================================================================== */
+function collectProject(){
+  // Traverse legs live in the DOM while that tab is open
+  if(currentTab==='traverse'){
+    try{ travLegCache = tvReadLegs(); }catch(e){}
+  }
+  return {
+    _format:'survey-toolkit-project',
+    _version:1,
+    savedAt:new Date().toISOString(),
+    angleMode: ANGLE_MODE,
+    library: libPoints,
+    traverse: { start:travStart, angleMode:travAngleMode, legCount:travLegCount, legs:travLegCache },
+    inverse: invPts,
+    area: areaPts,
+    subdiv: { mode:sdMode, pts:sdPts },
+    level: { mode:lvMode, pts:lvPts, secs:lvSecs, tin:lvTin, designMode:lvDesignMode },
+    curve: { hz:hcState, vt:vcState },
+    transform: { mode:transMode, pts:transPts },
+    offsetCheck: ockPts,
+    stakeout: stoPts,
+    radiation: radShots
+  };
+}
+function applyProject(p){
+  if(!p || p._format!=='survey-toolkit-project') throw new Error('ไฟล์นี้ไม่ใช่โปรเจกต์ของ Survey Toolkit');
+  if(p.angleMode){ ANGLE_MODE = p.angleMode; const s=document.getElementById('angleModeSel'); if(s) s.value=p.angleMode; }
+  if(Array.isArray(p.library)) { libPoints = p.library; libLoaded = true; }
+  if(p.traverse){
+    travStart     = p.traverse.start     || travStart;
+    travAngleMode = p.traverse.angleMode || travAngleMode;
+    travLegCount  = p.traverse.legCount  || travLegCount;
+    travLegCache  = p.traverse.legs      || [];
+  }
+  if(Array.isArray(p.inverse)) invPts = p.inverse;
+  if(Array.isArray(p.area))    areaPts = p.area;
+  if(p.subdiv){ sdMode = p.subdiv.mode || sdMode; if(Array.isArray(p.subdiv.pts)) sdPts = p.subdiv.pts; }
+  if(p.level){
+    lvMode = p.level.mode || lvMode;
+    lvDesignMode = p.level.designMode || lvDesignMode;
+    if(Array.isArray(p.level.pts))  lvPts  = p.level.pts;
+    if(Array.isArray(p.level.secs)) lvSecs = p.level.secs;
+    if(Array.isArray(p.level.tin))  lvTin  = p.level.tin;
+  }
+  if(p.curve){
+    if(p.curve.hz) hcState = Object.assign(hcState, p.curve.hz);
+    if(p.curve.vt) vcState = Object.assign(vcState, p.curve.vt);
+  }
+  if(p.transform){ transMode = p.transform.mode || transMode; if(Array.isArray(p.transform.pts)) transPts = p.transform.pts; }
+  if(Array.isArray(p.offsetCheck)) ockPts = p.offsetCheck;
+  if(Array.isArray(p.stakeout))    stoPts = p.stakeout;
+  if(Array.isArray(p.radiation))   radShots = p.radiation;
+}
+
+function renderProject(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <h2>💾 โปรเจกต์</h2>
+    <p class="desc">บันทึกงานทั้งหมด (Traverse, คลังพิกัด, พื้นที่, ระดับ ฯลฯ) ไว้กลับมาทำต่อได้ — แนะนำให้ <strong>ส่งออกเป็นไฟล์</strong> เพราะเชื่อถือได้เสมอ ส่วนการบันทึกลงเครื่องอาจใช้ไม่ได้ในบางเบราว์เซอร์</p>
+
+    <h3 style="font-size:14px;margin:12px 0 6px;">ไฟล์โปรเจกต์ (แนะนำ)</h3>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="projExportFile()">⬇︎ ส่งออกไฟล์ .json</button>
+      <label class="filebtn">⬆︎ เปิดไฟล์โปรเจกต์<input type="file" accept=".json" onchange="projImportFile(event)"></label>
+    </div>
+
+    <hr class="div">
+    <h3 style="font-size:14px;margin:0 0 6px;">บันทึกลงเครื่องนี้ <span id="proj_backend" class="pill">กำลังตรวจสอบ...</span></h3>
+    <div class="field-row">
+      <div class="field" style="flex:1 1 140px;"><label>ชื่อโปรเจกต์</label><input id="proj_name" placeholder="เช่น แปลงนาคุณสมชาย"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-secondary btn-small" onclick="projSaveSlot()">บันทึก</button>
+      <button class="btn-secondary btn-small" onclick="projListSlots()">โหลดรายการ</button>
+    </div>
+    <div id="proj_slots"></div>
+    <div id="proj_msg"></div>
+  </div>`;
+  projShowBackend();
+  projListSlots();
+}
+
+async function projShowBackend(){
+  await detectBackend();
+  const el = document.getElementById('proj_backend');
+  if(!el) return;
+  el.textContent = backendLabel();
+  if(STORAGE_BACKEND === 'memory'){
+    el.style.background = 'var(--rust)';
+    const msg = document.getElementById('proj_msg');
+    if(msg) msg.innerHTML = `<div class="note">เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกถาวร (มักเกิดตอนเปิดจากในแอป) — ใช้ "ส่งออกไฟล์ .json" ไปก่อน หรือดาวน์โหลดไฟล์ HTML ไปเปิดในเบราว์เซอร์บนเครื่อง แล้วการบันทึกจะทำงานได้</div>`;
+  }
+}
+
+function projExportFile(){
+  const p = collectProject();
+  const name = 'survey-project-' + new Date().toISOString().slice(0,10) + '.json';
+  downloadText(JSON.stringify(p, null, 2), name);
+  const m=document.getElementById('proj_msg');
+  if(m) m.innerHTML = `<div class="note" style="color:var(--pine);font-weight:600;">✓ ส่งออกไฟล์แล้ว เก็บไฟล์นี้ไว้เปิดกลับมาทำต่อได้</div>`;
+}
+function projImportFile(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload = ev=>{
+    const msg=document.getElementById('proj_msg');
+    try{
+      applyProject(JSON.parse(ev.target.result));
+      msg.innerHTML = `<div class="note" style="color:var(--pine);font-weight:600;">✓ เปิดโปรเจกต์แล้ว — สลับไปแท็บที่ต้องการทำต่อได้เลย</div>`;
+    }catch(e){
+      msg.innerHTML = `<div class="error-box">เปิดไฟล์ไม่สำเร็จ: ${e.message}</div>`;
+    }
+  };
+  reader.readAsText(file,'UTF-8');
+  evt.target.value='';
+}
+
+async function projSaveSlot(){
+  const msg=document.getElementById('proj_msg');
+  const name=(document.getElementById('proj_name').value||'').trim();
+  if(!name){ msg.innerHTML=`<div class="error-box">ตั้งชื่อโปรเจกต์ก่อนบันทึก</div>`; return; }
+  msg.innerHTML=`<div class="note">กำลังบันทึก...</div>`;
+  const ok = await storageSave('proj:'+name, collectProject());
+  if(ok){
+    let index = await storageLoad('proj-index', []);
+    if(!index.includes(name)){ index.push(name); await storageSave('proj-index', index); }
+    msg.innerHTML=`<div class="note" style="color:var(--pine);font-weight:600;">✓ บันทึก "${name}" แล้ว (${backendLabel()})</div>`;
+    projListSlots();
+  } else {
+    msg.innerHTML=`<div class="error-box">เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกถาวร — ใช้ปุ่ม "ส่งออกไฟล์ .json" แทน จะเชื่อถือได้เสมอ</div>`;
+  }
+}
+async function projListSlots(){
+  const el=document.getElementById('proj_slots');
+  if(!el) return;
+  const index = await storageLoad('proj-index', []);
+  if(!index.length){ el.innerHTML=`<div class="desc">ยังไม่มีโปรเจกต์ที่บันทึกไว้ในเครื่องนี้</div>`; return; }
+  el.innerHTML = index.map(name=>`
+    <div class="lib-row">
+      <div class="field" style="flex:1 1 auto;"><label>โปรเจกต์</label><div class="mono" style="padding:6px 0;">${name}</div></div>
+      <button class="btn-secondary btn-small" onclick="projLoadSlot('${name.replace(/'/g,"\\'")}')">เปิด</button>
+      <button class="btn-danger" onclick="projDeleteSlot('${name.replace(/'/g,"\\'")}')">ลบ</button>
+    </div>`).join('');
+}
+async function projLoadSlot(name){
+  const msg=document.getElementById('proj_msg');
+  const p = await storageLoad('proj:'+name, null);
+  if(!p){ msg.innerHTML=`<div class="error-box">เปิดโปรเจกต์ "${name}" ไม่สำเร็จ</div>`; return; }
+  try{
+    applyProject(p);
+    msg.innerHTML=`<div class="note" style="color:var(--pine);font-weight:600;">✓ เปิด "${name}" แล้ว — สลับไปแท็บที่ต้องการทำต่อได้เลย</div>`;
+  }catch(e){ msg.innerHTML=`<div class="error-box">${e.message}</div>`; }
+}
+async function projDeleteSlot(name){
+  if(!confirm(`ลบโปรเจกต์ "${name}" ออกจากเครื่อง?`)) return;
+  await storageDelete('proj:'+name);
+  let index = await storageLoad('proj-index', []);
+  index = index.filter(x=>x!==name);
+  await storageSave('proj-index', index);
+  projListSlots();
+}
+
+/* =====================================================================
+   INIT
+===================================================================== */
+buildTabBar();
+renderTab(currentTab);
+
+async function initApp(){
+  try{
+    const savedAngle = await storageLoad('pref-angle-mode', 'dms');
+    ANGLE_MODE = savedAngle;
+    document.getElementById('angleModeSel').value = savedAngle;
+    const savedOutdoor = await storageLoad('pref-outdoor', false);
+    setOutdoorMode(savedOutdoor, true);
+    await ensureLibLoaded();
+    if(currentTab==='library') renderTab('library');
+  }catch(e){ console.error('init failed', e); }
+}
+initApp();
+
+</script>
+</body>
+</html>
